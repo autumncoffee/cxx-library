@@ -145,6 +145,11 @@ namespace NAC {
                 return ResponseSent->load();
             }
 
+            template<typename... TArgs>
+            auto AwaitHTTP(TArgs... args) const {
+                return Responder.AwaitHTTP(std::forward<TArgs>(args)...);
+            }
+
         private:
             void ParseParts();
 

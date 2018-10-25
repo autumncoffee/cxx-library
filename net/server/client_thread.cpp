@@ -1,9 +1,9 @@
 #include "server.hpp"
 #include "client_thread.hpp"
 #include "client.hpp"
+#include "add_client.hpp"
 
 #include <muhev.hpp>
-#include <utils/socket.hpp>
 #include <iostream>
 #include <fcntl.h>
 #include <sys/types.h>
@@ -156,20 +156,29 @@ namespace NAC {
                 auto newClient = Args->Queue.front();
                 Args->Queue.pop();
 
-                std::shared_ptr<NNetServer::TBaseClient> client(
-                    Args->ClientFactory(
-                        (Args->ClientArgsFactory
-                            ? Args->ClientArgsFactory()
-                            : new NNetServer::TBaseClient::TArgs
-                        ),
-                        newClient->Fh,
-                        WakeupFds[1],
-                        newClient->Addr
-                    )
+                std::unique_ptr<NNetServer::TBaseClient::TArgs> clientArgs(Args->ClientArgsFactory
+                    ? Args->ClientArgsFactory()
+                    : new NNetServer::TBaseClient::TArgs
                 );
 
-                client->SetWeakPtr(client);
-                ActiveClients.push_back(client);
+                if (clientArgs->AddClient) {
+                    abort();
+                }
+
+                clientArgs->Fh = newClient->Fh;
+                clientArgs->WakeupFd = WakeupFds[1];
+                clientArgs->Addr = newClient->Addr;
+
+                auto&& addClient = clientArgs->AddClient = [this](std::shared_ptr<NNetServer::TBaseClient> client) {
+                    client->SetWeakPtr(client);
+                    ActiveClients.push_back(client);
+                };
+
+                std::shared_ptr<NNetServer::TBaseClient> client(
+                    Args->ClientFactory(clientArgs.release())
+                );
+
+                addClient(client);
             }
         }
     }

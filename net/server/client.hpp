@@ -6,6 +6,8 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include "add_client.hpp"
+#include <net/client/connect.hpp>
 
 namespace NAC {
     namespace NNetServer {
@@ -15,6 +17,7 @@ namespace NAC {
                 int Fh;
                 int WakeupFd;
                 std::shared_ptr<sockaddr_in> Addr;
+                TAddClient AddClient;
             };
 
         public:
@@ -48,6 +51,36 @@ namespace NAC {
 
             int GetFh() const {
                 return Args->Fh;
+            }
+
+            template<typename T, typename... TArgs>
+            std::shared_ptr<TBaseClient> Connect(
+                const char* const host,
+                const short port,
+                const size_t maxRetries,
+                TArgs... forwardClientArgs
+            ) const {
+                static_assert(std::is_base_of<TBaseClient, T>::value);
+                static_assert(std::is_base_of<TBaseClient::TArgs, typename T::TArgs>::value);
+
+                std::shared_ptr<sockaddr_in> addr;
+                socklen_t addrLen;
+                int fh;
+
+                if (!NNetClient::Connect(host, port, addr, addrLen, fh, maxRetries)) {
+                    return std::shared_ptr<TBaseClient>();
+                }
+
+                std::unique_ptr<typename T::TArgs> clientArgs(new typename T::TArgs(std::forward<TArgs>(forwardClientArgs)...));
+                clientArgs->Fh = fh;
+                clientArgs->WakeupFd = Args->WakeupFd;
+                clientArgs->Addr = addr;
+                clientArgs->AddClient = Args->AddClient;
+
+                std::shared_ptr<TBaseClient> out(new T(clientArgs.release()));
+                Args->AddClient(out);
+
+                return out;
             }
 
         protected:

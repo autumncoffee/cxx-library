@@ -11,6 +11,7 @@ namespace NAC {
 
         public:
             using NNetServer::TNetClient::TNetClient;
+            using NNetServer::TNetClient::PushWriteQueue;
 
             void Cb(const NMuhEv::TEvSpec& event) override;
             void PushWriteQueue(std::shared_ptr<NHTTPLikeParser::TParsedData> data);

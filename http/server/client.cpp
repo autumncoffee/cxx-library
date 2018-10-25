@@ -19,17 +19,13 @@ namespace NAC {
 
             try {
                 try {
-                    NHTTP::TRequest request(data, responder);
+                    auto request = std::make_shared<const NHTTP::TRequest>(data, responder);
 
                     try {
                         HandleRequestImpl(request);
 
-                        if (!request.IsResponseSent()) {
-                            request.Send(InternalServerError());
-                        }
-
                     } catch(const std::exception& e) {
-                        HandleException(request, e);
+                        HandleException(*request, e);
                     }
 
                 } catch(const std::exception& e) {
@@ -41,10 +37,10 @@ namespace NAC {
             }
         }
 
-        void TClient::HandleRequestImpl(const NHTTP::TRequest& request) {
+        void TClient::HandleRequestImpl(const std::shared_ptr<const NHTTP::TRequest> request) {
             std::cerr
                 << "[access] "
-                << request.FirstLine()
+                << request->FirstLine()
                 << std::endl
             ;
 

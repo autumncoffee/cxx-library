@@ -27,17 +27,8 @@ namespace NAC {
                     static_assert(std::is_base_of<TBaseClient, T>::value);
                     static_assert(std::is_base_of<TBaseClient::TArgs, typename T::TArgs>::value);
 
-                    return [](
-                        TBaseClient::TArgs* const baseArgs,
-                        int fh,
-                        int wakeupFd,
-                        std::shared_ptr<sockaddr_in> addr
-                    ) -> TBaseClient* {
-                        baseArgs->Fh = fh;
-                        baseArgs->WakeupFd = wakeupFd;
-                        baseArgs->Addr = addr;
-
-                        return new T(baseArgs);
+                    return [](TBaseClient::TArgs* const args) -> TBaseClient* {
+                        return new T(args);
                     };
                 }
             };

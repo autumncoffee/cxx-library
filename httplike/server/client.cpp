@@ -52,7 +52,7 @@ namespace NAC {
             item.Data = data->Request.Data();
             item.Orig = data;
 
-            NNetServer::TNetClient::PushWriteQueue(std::move(item_));
+            PushWriteQueue(std::move(item_));
         }
     }
 }

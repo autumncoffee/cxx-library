@@ -9,13 +9,7 @@
 
 namespace NAC {
     namespace NNetServer {
-        using TClientFactory = std::function<TBaseClient*(
-            TBaseClient::TArgs*,
-            int fh,
-            int wakeupFd,
-            std::shared_ptr<sockaddr_in> addr)
-        >;
-
+        using TClientFactory = std::function<TBaseClient*(TBaseClient::TArgs*)>;
         using TClientArgsFactory = std::function<TBaseClient::TArgs*()>;
 
         struct TNewClient {

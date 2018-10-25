@@ -5,11 +5,11 @@
 namespace NAC {
     namespace NHTTPRouter {
         void TRouter::Handle(
-            const NHTTP::TRequest& request,
+            const std::shared_ptr<const NHTTP::TRequest> request,
             const std::vector<std::string>& inputArgs,
             const size_t prefixLen
         ) {
-            pcrecpp::StringPiece path(request.Path());
+            pcrecpp::StringPiece path(request->Path());
 
             if(prefixLen > 0)
                 path.remove_prefix(prefixLen);
@@ -46,7 +46,7 @@ namespace NAC {
                 }
             }
 
-            request.Send(RouteNotFound(request));
+            request->Send(RouteNotFound(*request));
         }
 
         void TRouter::Add(const std::string& path, std::shared_ptr<NHTTPHandler::THandler> handler) {

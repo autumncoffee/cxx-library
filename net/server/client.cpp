@@ -1,6 +1,8 @@
 #include "client.hpp"
 #include <unistd.h>
 #include <iostream>
+#include <utils/socket.hpp>
+#include <fcntl.h>
 
 namespace NAC {
     namespace NNetServer {
@@ -30,6 +32,9 @@ namespace NAC {
         TNetClient::TNetClient(const TArgs* const args)
             : TBaseClient(args)
         {
+            NSocketUtils::SetupSocket(Args->Fh, 1000); // TODO: check return value
+            fcntl(Args->Fh, F_SETFL, fcntl(Args->Fh, F_GETFL, 0) | O_NONBLOCK);
+
             Destroyed = false;
         }
 

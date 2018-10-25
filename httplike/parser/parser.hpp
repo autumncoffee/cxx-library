@@ -19,7 +19,6 @@ namespace NAC {
             const size_t BodySize = 0;
             char* Body = nullptr;
             TBlob Request;
-            size_t WriteOffset = 0;
 
             template<typename... TArgs>
             TParsedData& Append(TArgs&&... args) {
