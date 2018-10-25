@@ -94,8 +94,13 @@ namespace NAC {
             ParseContentType(Headers(), "content-disposition", ContentDisposition_, ContentDispositionParams_);
         }
 
-        TRequest::TRequest(std::shared_ptr<NHTTPLikeParser::TParsedData> data)
+        TRequest::TRequest(
+            std::shared_ptr<NHTTPLikeParser::TParsedData> data,
+            const NHTTPServer::TResponder& responder
+        )
             : Data(data)
+            , Responder(responder)
+            , ResponseSent(new std::atomic<bool>(false))
         {
             std::queue<std::pair<std::string*, bool>> out {{
                 {&Method_, true},

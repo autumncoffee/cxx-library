@@ -4,7 +4,7 @@
 
 namespace NAC {
     namespace NHTTPRouter {
-        NHTTP::TResponse TRouter::Handle(
+        void TRouter::Handle(
             const NHTTP::TRequest& request,
             const std::vector<std::string>& inputArgs,
             const size_t prefixLen
@@ -39,14 +39,14 @@ namespace NAC {
                     auto handler = std::get<1>(spec);
 
                     if(auto* router = dynamic_cast<TRouter*>(handler.get())) {
-                        return router->Handle(request, handlerArgs, prefixLen + consumed);
+                        router->Handle(request, handlerArgs, prefixLen + consumed);
                     }
 
-                    return handler->Handle(request, handlerArgs);
+                    handler->Handle(request, handlerArgs);
                 }
             }
 
-            return RouteNotFound(request);
+            request.Send(RouteNotFound(request));
         }
 
         void TRouter::Add(const std::string& path, std::shared_ptr<NHTTPHandler::THandler> handler) {

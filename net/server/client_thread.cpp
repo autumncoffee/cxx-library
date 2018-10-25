@@ -12,9 +12,13 @@
 #include <netinet/tcp.h>
 
 namespace NAC {
-    namespace NHTTPLikeServer {
-        TClientThreadArgs::TClientThreadArgs(TDataCallback& onData)
-            : OnData(onData)
+    namespace NNetServer {
+        TClientThreadArgs::TClientThreadArgs(
+            TClientFactory& clientFactory,
+            TClientArgsFactory& clientArgsFactory
+        )
+            : ClientFactory(clientFactory)
+            , ClientArgsFactory(clientArgsFactory)
         {
             if(socketpair(PF_LOCAL, SOCK_STREAM, 0, Fds) == -1) {
                 perror("socketpair");
@@ -119,7 +123,7 @@ namespace NAC {
 
                                 // NUtils::cluck(1, "accept()");
                                 if(event.Ctx == &AcceptContext) {
-                                    accept();
+                                    Accept();
                                 }
 
                             // } else {
@@ -127,34 +131,11 @@ namespace NAC {
                             // }
 
                         } else {
-                            auto client = (NHTTPLikeServer::TClient*)event.Ctx;
+                            auto client = (NNetServer::TBaseClient*)event.Ctx;
 
                             if(client->IsAlive()) {
                                 // NUtils::cluck(1, "client_cb()");
                                 client->Cb(event);
-
-                                const auto& data = client->GetData();
-
-                                for (const auto& node : data) {
-                                    // char firstLine[node->FirstLineSize + 1];
-                                    // memcpy(firstLine, node->FirstLine, node->FirstLineSize);
-                                    // firstLine[node->FirstLineSize] = '\0';
-                                    //
-                                    // std::cerr << firstLine << std::endl;
-                                    //
-                                    // for (const auto& header : node->Headers) {
-                                    //     std::cerr << header.first << ": " << header.second << std::endl;
-                                    // }
-                                    //
-                                    // if (node->BodySize > 0) {
-                                    //     char body[node->BodySize + 1];
-                                    //     memcpy(body, node->Body, node->BodySize);
-                                    //     body[node->BodySize] = '\0';
-                                    //
-                                    //     std::cerr << body << std::endl;
-                                    // }
-                                    client->PushWriteQueue(Args->OnData(node));
-                                }
 
                             } else {
                                 // TODO
@@ -168,19 +149,26 @@ namespace NAC {
             }
         }
 
-        void TClientThread::accept() {
+        void TClientThread::Accept() {
             NUtils::TSpinLockGuard guard(Args->Mutex);
 
             while(!Args->Queue.empty()) {
                 auto newClient = Args->Queue.front();
                 Args->Queue.pop();
 
-                auto client = std::make_shared<NHTTPLikeServer::TClient>(
-                    newClient->Fh,
-                    WakeupFds[1],
-                    newClient->Addr
+                std::shared_ptr<NNetServer::TBaseClient> client(
+                    Args->ClientFactory(
+                        (Args->ClientArgsFactory
+                            ? Args->ClientArgsFactory()
+                            : new NNetServer::TBaseClient::TArgs
+                        ),
+                        newClient->Fh,
+                        WakeupFds[1],
+                        newClient->Addr
+                    )
                 );
 
+                client->SetWeakPtr(client);
                 ActiveClients.push_back(client);
             }
         }

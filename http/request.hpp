@@ -2,6 +2,16 @@
 
 #include <httplike/parser/parser.hpp>
 #include "response.hpp"
+#include <http/server/responder.hpp>
+
+#define AC_HTTP_REQUEST_CODE_SHORTCUT(code, msg) \
+TResponse Respond ## code() const { \
+    return Respond(#code " " msg); \
+} \
+\
+void Send ## code() const { \
+    Send(Respond ## code()); \
+}
 
 namespace NAC {
     namespace NHTTP {
@@ -53,7 +63,10 @@ namespace NAC {
 
         class TRequest {
         public:
-            explicit TRequest(std::shared_ptr<NHTTPLikeParser::TParsedData> data);
+            TRequest(
+                std::shared_ptr<NHTTPLikeParser::TParsedData> data,
+                const NHTTPServer::TResponder& responder
+            );
 
             const std::string FirstLine() const {
                 return std::string(Data->FirstLine, Data->FirstLineSize);
@@ -109,23 +122,27 @@ namespace NAC {
                 return out;
             }
 
-            TResponse Respond200() const {
-                return Respond("200 OK");
-            }
-
-            TResponse Respond400() const {
-                return Respond("400 Bad Request");
-            }
-
-            TResponse Respond403() const {
-                return Respond("403 Forbidden");
-            }
+            AC_HTTP_REQUEST_CODE_SHORTCUT(200, "OK");
+            AC_HTTP_REQUEST_CODE_SHORTCUT(400, "Bad Request");
+            AC_HTTP_REQUEST_CODE_SHORTCUT(403, "Forbidden");
 
             template<typename... TArgs>
             TResponse RespondContent(TArgs&&... args) const {
                 auto out = Respond200();
                 out.Write(std::forward<TArgs&&>(args)...);
                 return out;
+            }
+
+            void Send(const TResponse& response) const {
+                if (ResponseSent->exchange(true)) {
+                    throw std::runtime_error("Response sent twice");
+                }
+
+                Responder.Respond(response);
+            }
+
+            bool IsResponseSent() const {
+                return ResponseSent->load();
             }
 
         private:
@@ -141,6 +158,8 @@ namespace NAC {
             std::string ContentType_;
             TContentTypeParams ContentTypeParams_;
             std::vector<TBodyPart> Parts_;
+            NHTTPServer::TResponder Responder;
+            std::unique_ptr<std::atomic<bool>> ResponseSent;
         };
     }
 }

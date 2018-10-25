@@ -5,12 +5,18 @@
 #include <memory>
 #include <netinet/in.h>
 #include <queue>
-#include <httplike/server/client.hpp>
-#include <httplike/parser/parser.hpp>
+#include "client.hpp"
 
 namespace NAC {
-    namespace NHTTPLikeServer {
-        using TDataCallback = std::function<std::shared_ptr<NHTTPLikeParser::TParsedData>(std::shared_ptr<NHTTPLikeParser::TParsedData> request)>;
+    namespace NNetServer {
+        using TClientFactory = std::function<TBaseClient*(
+            TBaseClient::TArgs*,
+            int fh,
+            int wakeupFd,
+            std::shared_ptr<sockaddr_in> addr)
+        >;
+
+        using TClientArgsFactory = std::function<TBaseClient::TArgs*()>;
 
         struct TNewClient {
             int Fh;
@@ -18,12 +24,14 @@ namespace NAC {
         };
 
         struct TClientThreadArgs {
-            TDataCallback& OnData;
             std::queue<std::shared_ptr<TNewClient>> Queue;
             NUtils::TSpinLock Mutex;
             int Fds[2];
 
-            TClientThreadArgs(TDataCallback& onData);
+            TClientFactory& ClientFactory;
+            TClientArgsFactory& ClientArgsFactory;
+
+            TClientThreadArgs(TClientFactory&, TClientArgsFactory&);
             ~TClientThreadArgs();
         };
 
@@ -31,14 +39,14 @@ namespace NAC {
         public:
             explicit TClientThread(std::shared_ptr<TClientThreadArgs> args);
 
-            virtual void Run() override;
+            void Run() override;
 
         private:
-            void accept();
+            void Accept();
 
         private:
             std::shared_ptr<TClientThreadArgs> Args;
-            std::deque<std::shared_ptr<NHTTPLikeServer::TClient>> ActiveClients;
+            std::deque<std::shared_ptr<NNetServer::TBaseClient>> ActiveClients;
             int WakeupFds[2];
             char WakeupContext;
             char AcceptContext;

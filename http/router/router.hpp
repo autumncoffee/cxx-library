@@ -9,17 +9,17 @@ namespace NAC {
     namespace NHTTPRouter {
         class TRouter : public NHTTPHandler::THandler {
         public:
-            virtual NHTTP::TResponse Handle(
+            virtual void Handle(
                 const NHTTP::TRequest& request,
                 const std::vector<std::string>& args,
                 const size_t prefixLen
             );
 
-            NHTTP::TResponse Handle(
+            void Handle(
                 const NHTTP::TRequest& request,
                 const std::vector<std::string>& args
             ) override {
-                return Handle(request, args, 0);
+                Handle(request, args, 0);
             }
 
             void Add(const std::string& path, std::shared_ptr<NHTTPHandler::THandler> handler);

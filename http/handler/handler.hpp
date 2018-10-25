@@ -10,7 +10,7 @@ namespace NAC {
         public:
             virtual ~THandler();
 
-            virtual NHTTP::TResponse Handle(
+            virtual void Handle(
                 const NHTTP::TRequest& request,
                 const std::vector<std::string>& args
             ) = 0;

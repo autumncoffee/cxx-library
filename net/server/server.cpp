@@ -32,8 +32,8 @@ namespace {
 
 namespace NAC {
     using TClientThreadPair = std::pair<
-        std::shared_ptr<NHTTPLikeServer::TClientThreadArgs>,
-        std::shared_ptr<NHTTPLikeServer::TClientThread>
+        std::shared_ptr<NNetServer::TClientThreadArgs>,
+        std::shared_ptr<NNetServer::TClientThread>
     >;
 
     template<>
@@ -41,7 +41,7 @@ namespace NAC {
         return NextImpl();
     }
 
-    namespace NHTTPLikeServer {
+    namespace NNetServer {
         void TServer::Run() {
             std::vector<std::pair<int, std::shared_ptr<sockaddr_storage>>> binds;
             binds.reserve(2);
@@ -101,7 +101,10 @@ namespace NAC {
 
             for (size_t i = 0; i < Args.ThreadCount; ++i) {
                 std::shared_ptr<TClientThreadArgs> args;
-                args.reset(new TClientThreadArgs(OnData));
+                args.reset(new TClientThreadArgs(
+                    Args.ClientFactory,
+                    Args.ClientArgsFactory
+                ));
 
                 std::shared_ptr<TClientThread> thread;
                 thread.reset(new TClientThread(args));
