@@ -33,6 +33,7 @@ namespace NAC {
             virtual void Cb(const NMuhEv::TEvSpec& event) = 0;
             virtual bool IsAlive() const = 0;
             virtual bool ShouldWrite() = 0;
+            virtual void Drop() = 0;
 
             void WakeLoop() const;
             void SetWeakPtr(const std::shared_ptr<TBaseClient>& ptr);
@@ -110,7 +111,7 @@ namespace NAC {
 
             virtual void Destroy();
 
-            virtual void Drop() {
+            void Drop() override {
                 Destroy();
             }
 
