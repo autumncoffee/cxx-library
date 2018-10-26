@@ -123,7 +123,12 @@ namespace NAC {
 
                                 // NUtils::cluck(1, "accept()");
                                 if(event.Ctx == &AcceptContext) {
-                                    Accept();
+                                    try {
+                                        Accept();
+
+                                    } catch(const std::exception& e) {
+                                        std::cerr << "Failed to accept client: " << e.what() << std::endl;
+                                    }
                                 }
 
                             // } else {
@@ -135,7 +140,13 @@ namespace NAC {
 
                             if(client->IsAlive()) {
                                 // NUtils::cluck(1, "client_cb()");
-                                client->Cb(event);
+                                try {
+                                    client->Cb(event);
+
+                                } catch(const std::exception& e) {
+                                    std::cerr << "Failed to execute client callback: " << e.what() << std::endl;
+                                    client->Drop();
+                                }
 
                             } else {
                                 // TODO
