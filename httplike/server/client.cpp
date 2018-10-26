@@ -31,6 +31,10 @@ namespace NAC {
                 //
                 //     std::cerr << body << std::endl;
                 // }
+                if (!IsAlive()) {
+                    break;
+                }
+
                 OnData(node);
             }
         }

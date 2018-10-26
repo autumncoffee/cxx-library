@@ -135,7 +135,7 @@ namespace NAC {
 
             void Send(const TResponse& response) const {
                 if (ResponseSent->exchange(true)) {
-                    throw std::runtime_error("Response sent twice");
+                    throw std::runtime_error("Response sent twice: " + response.FirstLine());
                 }
 
                 Responder.Respond(response);
