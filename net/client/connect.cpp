@@ -6,6 +6,7 @@
 #include <utils/socket.hpp>
 #include <fcntl.h>
 #include <unistd.h>
+#include <string.h>
 
 namespace {
     bool ConnectImpl(

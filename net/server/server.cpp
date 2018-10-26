@@ -5,6 +5,7 @@
 #include <iostream>
 #include <round_robin_vector.hpp>
 #include <arpa/inet.h>
+#include <string.h>
 
 namespace {
     template<typename T>
