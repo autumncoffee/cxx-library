@@ -40,9 +40,12 @@ namespace NAC {
 
                     if(auto* router = dynamic_cast<TRouter*>(handler.get())) {
                         router->Handle(request, handlerArgs, prefixLen + consumed);
+
+                    } else {
+                        handler->Handle(request, handlerArgs);
                     }
 
-                    handler->Handle(request, handlerArgs);
+                    return;
                 }
             }
 
