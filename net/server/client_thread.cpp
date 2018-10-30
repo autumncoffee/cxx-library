@@ -182,6 +182,7 @@ namespace NAC {
 
                 auto&& addClient = clientArgs->AddClient = [this](std::shared_ptr<NNetServer::TBaseClient> client) {
                     client->SetWeakPtr(client);
+                    client->OnWire();
                     ActiveClients.push_back(client);
                 };
 
