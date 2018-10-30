@@ -10,10 +10,7 @@ namespace NAC {
 
         class TResponder {
         public:
-            using TAwaitHTTPCallback = std::function<void(
-                std::shared_ptr<NHTTPLikeParser::TParsedData>,
-                std::shared_ptr<NHTTPLikeServer::TClient>
-            )>;
+            using TAwaitHTTPClient = NHTTPLikeServer::TAwaitClient<NHTTPLikeServer::TClient>;
 
         public:
             TResponder(std::shared_ptr<TClient> client);
@@ -24,10 +21,10 @@ namespace NAC {
 
             void Respond(const NHTTP::TResponse& response) const;
 
-            std::shared_ptr<NHTTPLikeServer::TClient> AwaitHTTP(
+            std::shared_ptr<TResponder::TAwaitHTTPClient> AwaitHTTP(
                 const char* const host,
                 const short port,
-                TAwaitHTTPCallback&& cb,
+                TAwaitHTTPClient::TCallback&& cb,
                 const size_t maxRetries = 3
             ) const;
 

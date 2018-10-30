@@ -58,7 +58,7 @@ namespace NAC {
             }
 
             template<typename T, typename... TArgs>
-            std::shared_ptr<TBaseClient> Connect(
+            std::shared_ptr<T> Connect(
                 const char* const host,
                 const short port,
                 const size_t maxRetries,
@@ -72,7 +72,7 @@ namespace NAC {
                 int fh;
 
                 if (!NNetClient::Connect(host, port, addr, addrLen, fh, maxRetries)) {
-                    return std::shared_ptr<TBaseClient>();
+                    return std::shared_ptr<T>();
                 }
 
                 std::unique_ptr<typename T::TArgs> clientArgs(new typename T::TArgs(std::forward<TArgs>(forwardClientArgs)...));
@@ -81,7 +81,7 @@ namespace NAC {
                 clientArgs->Addr = addr;
                 clientArgs->AddClient = Args->AddClient;
 
-                std::shared_ptr<TBaseClient> out(new T(clientArgs.release()));
+                std::shared_ptr<T> out(new T(clientArgs.release()));
                 Args->AddClient(out);
 
                 return out;

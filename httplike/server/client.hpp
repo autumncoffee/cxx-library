@@ -2,6 +2,7 @@
 
 #include <net/server/client.hpp>
 #include <httplike/parser/parser.hpp>
+#include <functional>
 
 namespace NAC {
     namespace NHTTPLikeServer {
@@ -23,6 +24,42 @@ namespace NAC {
 
         private:
             NHTTPLikeParser::TParser Parser;
+        };
+
+        template<typename TBase = TClient>
+        class TAwaitClient : public TBase {
+            static_assert(std::is_base_of<TClient, TBase>::value);
+            static_assert(!std::is_base_of<TAwaitClient, TBase>::value);
+
+        public:
+            using TCallback = std::function<void(
+                std::shared_ptr<NHTTPLikeParser::TParsedData>,
+                std::shared_ptr<TBase>
+            )>;
+
+            struct TArgs : public TBase::TArgs {
+                TCallback Cb;
+                std::shared_ptr<NNetServer::TBaseClient> OrigClient;
+
+                template<typename... TArgs_>
+                TArgs(
+                    TCallback&& cb,
+                    std::shared_ptr<NNetServer::TBaseClient> origClient,
+                    TArgs_... args
+                )
+                    : TBase::TArgs(std::forward<TArgs_>(args)...)
+                    , Cb(cb)
+                    , OrigClient(origClient)
+                {
+                }
+            };
+
+        public:
+            using TBase::TBase;
+
+            void OnData(std::shared_ptr<NHTTPLikeParser::TParsedData> response) override {
+                ((TArgs*)TBase::Args.get())->Cb(response, TBase::template GetNewSharedPtr<TBase>());
+            }
         };
     }
 }
