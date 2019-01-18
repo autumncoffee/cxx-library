@@ -14,10 +14,10 @@ namespace NAC {
                 size_t Backlog = 10000;
 
                 const char* BindIP4 = "127.0.0.1";
-                short BindPort4 = 0;
+                unsigned short BindPort4 = 0;
 
                 const char* BindIP6 = "::1";
-                short BindPort6 = 0;
+                unsigned short BindPort6 = 0;
 
                 TClientFactory ClientFactory;
                 TClientArgsFactory ClientArgsFactory;
