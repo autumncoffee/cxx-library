@@ -232,6 +232,11 @@ namespace NAC {
 
                     Stage = STAGE_MASK_KEY;
                     msgOffset += SizeLen;
+
+                    if (Buf.Size() > 0) {
+                        Offset += SizeLen;
+                    }
+
                     SizeLen = 0;
                 }
 
@@ -249,6 +254,10 @@ namespace NAC {
 
                         memcpy(CurrentFrame->Mask, &data[msgOffset], sizeof(CurrentFrame->Mask));
                         msgOffset += sizeof(CurrentFrame->Mask);
+
+                        if (Buf.Size() > 0) {
+                            Offset += sizeof(CurrentFrame->Mask);
+                        }
                     }
 
                     Stage = STAGE_PAYLOAD;
