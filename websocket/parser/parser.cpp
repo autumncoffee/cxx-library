@@ -2,6 +2,7 @@
 #include <arpa/inet.h>
 #include <spin_lock.hpp>
 #include <cmath>
+#include <assert.h>
 // #include <iostream>
 
 #ifndef htonll
