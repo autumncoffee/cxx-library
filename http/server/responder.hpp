@@ -3,8 +3,13 @@
 #include <http/response.hpp>
 #include <functional>
 #include <httplike/server/client.hpp>
+#include <websocket/parser/parser.hpp>
 
 namespace NAC {
+    namespace NHTTP {
+        class TRequest;
+    };
+
     namespace NHTTPServer {
         class TClient;
 
@@ -20,6 +25,7 @@ namespace NAC {
             TResponder(TResponder&&) = default;
 
             void Respond(const NHTTP::TResponse& response) const;
+            void Send(const NWebSocketParser::TFrame& response) const;
 
             std::shared_ptr<TResponder::TAwaitHTTPClient> AwaitHTTP(
                 const char* const host,
@@ -28,8 +34,12 @@ namespace NAC {
                 const size_t maxRetries = 3
             ) const;
 
+            void OnWebSocketStart() const;
+            void SetRequestPtr(const std::shared_ptr<const NHTTP::TRequest>& ptr);
+
         private:
             std::shared_ptr<TClient> Client;
+            std::weak_ptr<const NHTTP::TRequest> RequestPtr;
         };
     }
 }

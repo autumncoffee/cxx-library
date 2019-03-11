@@ -4,6 +4,8 @@
 #include <utility>
 #include <queue>
 #include <utils/string.hpp>
+#include <openssl/sha.h>
+#include <openssl/evp.h>
 // #include <iostream>
 
 namespace {
@@ -300,6 +302,30 @@ namespace NAC {
             for(const auto& part : parts) {
                 Parts_.emplace_back(part);
             }
+        }
+
+        bool TRequest::IsWebSocketHandshake() const {
+            return (
+                (HeaderValueLower("connection") == std::string("upgrade"))
+                && (HeaderValueLower("upgrade") == std::string("websocket"))
+                && (!SecWebSocketKey().empty())
+                && (!SecWebSocketVersion().empty())
+            );
+        }
+
+        std::string TRequest::GenerateSecWebSocketAccept() const {
+            static const std::string magic("258EAFA5-E914-47DA-95CA-C5AB0DC85B11");
+
+            std::string tmp(SecWebSocketKey() + magic);
+
+            unsigned char hashed[SHA_DIGEST_LENGTH];
+            SHA1((const unsigned char*)tmp.data(), tmp.size(), hashed);
+
+            const size_t outLen(1 + (size_t)((((double)SHA_DIGEST_LENGTH / 3.0) * 4.0) + 0.5));
+            unsigned char out[outLen];
+            EVP_EncodeBlock(out, hashed, SHA_DIGEST_LENGTH);
+
+            return std::string((const char*)out, outLen);
         }
     }
 }

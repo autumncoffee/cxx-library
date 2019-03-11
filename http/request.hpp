@@ -3,6 +3,7 @@
 #include <httplike/parser/parser.hpp>
 #include "response.hpp"
 #include <http/server/responder.hpp>
+#include <websocket/parser/parser.hpp>
 
 #define AC_HTTP_REQUEST_CODE_SHORTCUT(code, msg) \
 TResponse Respond ## code() const { \
@@ -76,6 +77,34 @@ namespace NAC {
                 return Data->Headers;
             }
 
+            template<typename TArg>
+            std::string HeaderValueLower(const TArg& name) const {
+                std::string value(HeaderValue(name));
+                std::transform(value.begin(), value.end(), value.begin(), tolower);
+
+                return value;
+            }
+
+            template<typename TArg>
+            const std::string& HeaderValue(const TArg& name) const {
+                static const std::string empty;
+                const auto* values = HeaderValues(name);
+
+                return (values ? values->front() : empty);
+            }
+
+            template<typename TArg>
+            const std::vector<std::string>* HeaderValues(const TArg& name) const {
+                const auto& headers = Headers();
+                const auto& header = headers.find(name);
+
+                if ((header == headers.end()) || header->second.empty()) {
+                    return nullptr;
+                }
+
+                return &header->second;
+            }
+
             const std::string& Method() const {
                 return Method_;
             }
@@ -142,6 +171,10 @@ namespace NAC {
                 Responder.Respond(response);
             }
 
+            void Send(const NWebSocketParser::TFrame& frame) const {
+                Responder.Send(frame);
+            }
+
             bool IsResponseSent() const {
                 return ResponseSent->load();
             }
@@ -149,6 +182,45 @@ namespace NAC {
             template<typename... TArgs>
             auto AwaitHTTP(TArgs... args) const {
                 return Responder.AwaitHTTP(std::forward<TArgs>(args)...);
+            }
+
+            bool IsWebSocketHandshake() const;
+
+            const std::string& SecWebSocketKey() const {
+                return HeaderValue("sec-websocket-key");
+            }
+
+            const std::string& SecWebSocketVersion() const {
+                return HeaderValue("sec-websocket-version");
+            }
+
+            std::string GenerateSecWebSocketAccept() const;
+
+            TResponse RespondWebSocketAccept() const {
+                auto response = Respond("101 Switching Protocols");
+
+                response.Header("Connection", "Upgrade");
+                response.Header("Upgrade", "websocket");
+                response.Header("Sec-WebSocket-Accept", GenerateSecWebSocketAccept());
+
+                return response;
+            }
+
+            void SendWebSocketAccept() const {
+                Send(RespondWebSocketAccept());
+            }
+
+            void OnWebSocketStart() const {
+                Responder.OnWebSocketStart();
+            }
+
+            void WebSocketStart() const {
+                SendWebSocketAccept();
+                OnWebSocketStart();
+            }
+
+            void SetWeakPtr(const std::shared_ptr<const TRequest>& ptr) {
+                Responder.SetRequestPtr(ptr);
             }
 
         private:
