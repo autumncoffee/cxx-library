@@ -89,6 +89,10 @@ namespace NAC {
             PushWriteQueue(std::move(item_));
         }
 
+        void TClient::PushWriteQueue(const NHTTP::TResponse& response) {
+            PushWriteQueue((std::shared_ptr<NHTTPLikeParser::TParsedData>)response);
+        }
+
         void TClient::Cb(const NMuhEv::TEvSpec& event) {
             NHTTPLikeServer::TClient::Cb(event);
 

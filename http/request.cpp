@@ -268,7 +268,7 @@ namespace NAC {
             }
 
             std::string boundary;
-            boundary.reserve(boundary_->second.size() + 4);
+            boundary.reserve(boundary_->second.size() + 2);
             boundary += "--";
             boundary += boundary_->second;
 

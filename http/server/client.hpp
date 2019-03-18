@@ -26,6 +26,7 @@ namespace NAC {
 
             using NHTTPLikeServer::TClient::PushWriteQueue;
             void PushWriteQueue(const NWebSocketParser::TFrame& frame);
+            void PushWriteQueue(const NHTTP::TResponse& response);
 
             virtual void OnWebSocketStart(const std::shared_ptr<const NHTTP::TRequest> request);
 

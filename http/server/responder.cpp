@@ -11,7 +11,7 @@ namespace NAC {
         }
 
         void TResponder::Respond(const NHTTP::TResponse& response) const {
-            Client->PushWriteQueue((std::shared_ptr<NHTTPLikeParser::TParsedData>)response);
+            Client->PushWriteQueue(response);
         }
 
         void TResponder::Send(const NWebSocketParser::TFrame& frame) const {

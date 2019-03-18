@@ -4,7 +4,7 @@
 namespace NAC {
     namespace NHTTP {
         TResponse::operator std::shared_ptr<NHTTPLikeParser::TParsedData>() const {
-            if (FirstLine_.size() == 0) {
+            if (FirstLine_.empty()) {
                 throw std::logic_error("Reponse first line is empty");
             }
 
