@@ -3,6 +3,7 @@
 #include <iostream>
 #include <utils/socket.hpp>
 #include <fcntl.h>
+#include <assert.h>
 
 namespace NAC {
     namespace NNetServer {
