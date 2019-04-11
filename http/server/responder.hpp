@@ -38,7 +38,7 @@ namespace NAC {
             void SetRequestPtr(const std::shared_ptr<const NHTTP::TRequest>& ptr);
 
         private:
-            std::shared_ptr<TClient> Client;
+            std::weak_ptr<TClient> Client;
             std::weak_ptr<const NHTTP::TRequest> RequestPtr;
         };
     }
