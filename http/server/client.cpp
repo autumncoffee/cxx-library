@@ -188,5 +188,31 @@ namespace NAC {
             WebSocketOrigin = request;
             WebSocketParser.reset(new NWebSocketParser::TParser);
         }
+
+        int TClient::ReadFromSocket(
+            const int fh,
+            void* buf,
+            const size_t bufSize
+        ) {
+            // if (SSL) {
+            //     //
+            //
+            // } else {
+                return TNetClient::ReadFromSocket(fh, buf, bufSize);
+            // }
+        }
+
+        int TClient::WriteToSocket(
+            const int fh,
+            const void* buf,
+            const size_t bufSize
+        ) {
+            // if (SSL) {
+            //     //
+            //
+            // } else {
+                return TNetClient::WriteToSocket(fh, buf, bufSize);
+            // }
+        }
     }
 }

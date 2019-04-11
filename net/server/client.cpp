@@ -39,6 +39,8 @@ namespace NAC {
         }
 
         void TNetClient::Cb(const NMuhEv::TEvSpec& event) {
+            assert(event.Ident == Args->Fh);
+
             if(event.Flags & NMuhEv::MUHEV_FLAG_ERROR) {
                 std::cerr << "EV_ERROR" << std::endl;
                 Drop();
@@ -55,14 +57,7 @@ namespace NAC {
                 while(true) {
                     static const size_t bufSize = 8192;
                     char buf[bufSize];
-                    int read = recvfrom(
-                        event.Ident,
-                        buf,
-                        bufSize,
-                        MSG_DONTWAIT,
-                        NULL,
-                        0
-                    );
+                    int read = ReadFromSocket(event.Ident, buf, bufSize);
 
                     if(read > 0) {
                         OnData(read, buf);
@@ -91,12 +86,14 @@ namespace NAC {
                         break;
                     }
 
-                    if (item->Pos >= item->Size) {
-                        PopWriteItem();
-                        continue;
-                    }
+                    int written = 0;
 
-                    int written = ::write(event.Ident, item->Data + item->Pos, item->Size - item->Pos);
+                    if (item->Dummy) {
+                        written = WriteToSocket(-1, nullptr, 0);
+
+                    } else {
+                        written = WriteToSocket(event.Ident, item->Data + item->Pos, item->Size - item->Pos);
+                    }
 
                     if(written < 0) {
                         auto e = errno;
@@ -111,10 +108,35 @@ namespace NAC {
                         }
 
                     } else {
-                        item->Pos += written;
+                        if (item->Dummy) {
+                            PopWriteItem();
+
+                        } else {
+                            item->Pos += written;
+
+                            if (item->Pos >= item->Size) {
+                                PopWriteItem();
+                            }
+                        }
                     }
                 }
             }
+        }
+
+        int TNetClient::ReadFromSocket(
+            const int fh,
+            void* buf,
+            const size_t bufSize
+        ) {
+            return ::recvfrom(fh, buf, bufSize, MSG_DONTWAIT, NULL, 0);
+        }
+
+        int TNetClient::WriteToSocket(
+            const int fh,
+            const void* buf,
+            const size_t bufSize
+        ) {
+            return ::write(fh, buf, bufSize);
         }
 
         void TNetClient::PushWriteQueue(std::shared_ptr<TWriteQueueItem> data) {
@@ -125,7 +147,20 @@ namespace NAC {
             {
                 NUtils::TSpinLockGuard guard(WriteQueueLock);
 
-                WriteQueue.push(data);
+                WriteQueue.push_back(data);
+            }
+
+            WakeLoop();
+        }
+
+        void TNetClient::UnshiftDummyWriteQueueItem() {
+            auto data = std::make_shared<TWriteQueueItem>();
+            data->Dummy = true;
+
+            {
+                NUtils::TSpinLockGuard guard(WriteQueueLock);
+
+                WriteQueue.push_front(data);
             }
 
             WakeLoop();

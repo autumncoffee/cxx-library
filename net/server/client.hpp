@@ -102,6 +102,7 @@ namespace NAC {
                 size_t Pos = 0;
                 size_t Size = 0;
                 const char* Data = nullptr;
+                bool Dummy = false;
 
                 virtual ~TWriteQueueItem() {
                 }
@@ -133,7 +134,7 @@ namespace NAC {
             virtual void PopWriteItem() {
                 NUtils::TSpinLockGuard guard(WriteQueueLock);
 
-                WriteQueue.pop();
+                WriteQueue.pop_front();
             }
 
             bool IsAlive() const override {
@@ -149,9 +150,23 @@ namespace NAC {
         protected:
             virtual void OnData(const size_t dataSize, char* data) = 0;
 
+            virtual int ReadFromSocket(
+                const int fh,
+                void* buf,
+                const size_t bufSize
+            );
+
+            virtual int WriteToSocket(
+                const int fh,
+                const void* buf,
+                const size_t bufSize
+            );
+
+            void UnshiftDummyWriteQueueItem();
+
         private:
             std::atomic<bool> Destroyed;
-            std::queue<std::shared_ptr<TWriteQueueItem>> WriteQueue;
+            std::deque<std::shared_ptr<TWriteQueueItem>> WriteQueue;
             NUtils::TSpinLock WriteQueueLock;
         };
     }
