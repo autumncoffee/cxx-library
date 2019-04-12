@@ -65,11 +65,14 @@ namespace NAC {
                 ParsedData.emplace_back(new TParsedData {
                     .FirstLineSize = CurrentFirstLineSize,
                     .FirstLine = CurrentFirstLine,
-                    .Headers = CurrentHeaders,
+                    .Headers = std::move(CurrentHeaders),
                     .BodySize = OriginalContentLength,
                     .Body = body,
                     .Request = std::move(CurrentRequest)
                 });
+
+            } else if (CurrentFirstLine) {
+                free(CurrentFirstLine);
             }
 
             InContent = false;
@@ -211,13 +214,13 @@ namespace NAC {
 
                         for(; i < state.EffectiveLength; ++i) {
                             if(state.CurrentRequest[i] == '\n') {
-                                requestArray.push_back({i - prevOffset, state.CurrentRequest.Data() + prevOffset});
+                                requestArray.emplace_back(i - prevOffset, state.CurrentRequest.Data() + prevOffset);
                                 prevOffset = i + 1;
                             }
                         }
 
                         if((i - prevOffset) > 0) {
-                            requestArray.push_back({i - prevOffset, state.CurrentRequest.Data() + prevOffset});
+                            requestArray.emplace_back(i - prevOffset, state.CurrentRequest.Data() + prevOffset);
                         }
                     }
 

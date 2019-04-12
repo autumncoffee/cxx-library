@@ -110,7 +110,7 @@ namespace NAC {
                 std::shared_ptr<TClientThread> thread;
                 thread.reset(new TClientThread(args));
 
-                threads.push_back(TClientThreadPair(args, thread));
+                threads.emplace_back(TClientThreadPair(args, thread));
 
                 thread->Start();
             }

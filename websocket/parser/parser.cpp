@@ -343,7 +343,7 @@ namespace NAC {
             void Flush() {
                 {
                     NUtils::TSpinLockGuard guard(FramesLock);
-                    Frames.push_back(CurrentFrame);
+                    Frames.emplace_back(CurrentFrame);
                 }
 
                 CurrentFrame.reset();

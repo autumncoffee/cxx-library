@@ -56,7 +56,7 @@ namespace NAC {
                         continue;
                     }
 
-                    newActiveClients.push_back(client);
+                    newActiveClients.emplace_back(client);
 
                     loop.AddEvent(NMuhEv::TEvSpec {
                         .Ident = (uintptr_t)client->GetFh(),
@@ -183,7 +183,7 @@ namespace NAC {
                 auto&& addClient = clientArgs->AddClient = [this](std::shared_ptr<NNetServer::TBaseClient> client) {
                     client->SetWeakPtr(client);
                     client->OnWire();
-                    ActiveClients.push_back(client);
+                    ActiveClients.emplace_back(client);
                 };
 
                 std::shared_ptr<NNetServer::TBaseClient> client(

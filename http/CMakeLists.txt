@@ -20,6 +20,10 @@ if (NOT TARGET ac_library_http_router)
     add_subdirectory("router")
 endif()
 
+if (NOT TARGET ac_library_http_utils)
+    add_subdirectory("utils")
+endif()
+
 if (NOT TARGET ac_library_websocket_parser)
     add_subdirectory("../websocket/parser" ac_library_websocket_parser_bindir)
 endif()

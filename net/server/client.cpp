@@ -148,7 +148,7 @@ namespace NAC {
             {
                 NUtils::TSpinLockGuard guard(WriteQueueLock);
 
-                WriteQueue.push_back(data);
+                WriteQueue.emplace_back(data);
             }
 
             WakeLoop();
@@ -161,7 +161,7 @@ namespace NAC {
             {
                 NUtils::TSpinLockGuard guard(WriteQueueLock);
 
-                WriteQueue.push_front(data);
+                WriteQueue.emplace_front(data);
             }
 
             WakeLoop();

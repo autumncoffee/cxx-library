@@ -72,5 +72,29 @@ namespace NAC {
 
             size = offset;
         }
+
+        TBlob URLEscape(const size_t size, const char* data) {
+            static const bool ShouldEscape[256] = {true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, false, false, true, true, false, true, true, false, true, true, false, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, true, false, true, true, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, true, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, true, true, true, false, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true};
+            static const char CharTable[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
+            static const char Plus('+');
+
+            TBlob out;
+            out.Reserve(size);
+
+            for (size_t i = 0; i < size; ++i) {
+                if (data[i] == ' ') {
+                    out.Append(1, &Plus);
+
+                } else if (ShouldEscape[data[i]]) {
+                    out.Append(1, &CharTable[data[i] >> 4]);
+                    out.Append(1, &CharTable[data[i] & 0xf]);
+
+                } else {
+                    out.Append(1, &data[i]);
+                }
+            }
+
+            return out;
+        }
     }
 }
