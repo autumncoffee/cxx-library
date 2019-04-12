@@ -1,5 +1,6 @@
 #include <string>
 #include <random>
+#include <string.h>
 
 namespace NAC {
     namespace NHTTPUtils {
