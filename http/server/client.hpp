@@ -28,7 +28,7 @@ namespace NAC {
             void PushWriteQueue(const NWebSocketParser::TFrame& frame);
             void PushWriteQueue(const NHTTP::TResponse& response);
 
-            virtual void OnWebSocketStart(const std::shared_ptr<const NHTTP::TRequest> request);
+            virtual void OnWebSocketStart(std::shared_ptr<const NHTTP::TRequest> request);
 
         protected:
             virtual void OnData(std::shared_ptr<NWebSocketParser::TFrame> frame);
@@ -48,7 +48,7 @@ namespace NAC {
             ) override;
 
             virtual void HandleRequest(std::shared_ptr<NHTTPLikeParser::TParsedData> data);
-            virtual void HandleRequestImpl(const std::shared_ptr<const NHTTP::TRequest> request);
+            virtual void HandleRequestImpl(std::shared_ptr<const NHTTP::TRequest> request);
             virtual void HandleException(const NHTTP::TRequest& request, const std::exception& e);
             virtual NHTTP::TResponse InternalServerError(const std::exception& e) const;
             virtual NHTTP::TResponse InternalServerError() const;
@@ -56,7 +56,7 @@ namespace NAC {
 
             virtual void HandleFrame(
                 std::shared_ptr<NWebSocketParser::TFrame> frame,
-                const std::shared_ptr<const NHTTP::TRequest> origin
+                std::shared_ptr<const NHTTP::TRequest> origin
             );
 
         private:

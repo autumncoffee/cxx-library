@@ -29,15 +29,15 @@ namespace NAC {
         std::shared_ptr<TResponder::TAwaitHTTPClient> TResponder::AwaitHTTP(
             const char* const host,
             const short port,
-            NHTTPLikeServer::TAwaitClient<NHTTPLikeServer::TClient>::TCallback&& cb,
+            TAwaitHTTPClient::TCallback&& cb,
             const size_t maxRetries
         ) const {
             if (Client_.expired()) {
-                return std::shared_ptr<TResponder::TAwaitHTTPClient>();
+                return std::shared_ptr<TAwaitHTTPClient>();
             }
 
             auto client = Client();
-            return client->Connect<TAwaitHTTPClient>(host, port, maxRetries, cb, client->GetNewSharedPtr());
+            return client->Connect<TAwaitHTTPClient>(host, port, maxRetries, std::forward<TAwaitHTTPClient::TCallback>(cb), client->GetNewSharedPtr());
         }
 
         void TResponder::OnWebSocketStart() const {
@@ -48,7 +48,7 @@ namespace NAC {
             Client()->OnWebSocketStart((const std::shared_ptr<const NHTTP::TRequest>)RequestPtr);
         }
 
-        void TResponder::SetRequestPtr(const std::shared_ptr<const NHTTP::TRequest>& ptr) {
+        void TResponder::SetRequestPtr(std::shared_ptr<const NHTTP::TRequest>& ptr) {
             if(!RequestPtr.expired()) {
                 abort();
             }

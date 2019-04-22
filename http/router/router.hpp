@@ -10,13 +10,13 @@ namespace NAC {
         class TRouter : public NHTTPHandler::THandler {
         public:
             virtual void Handle(
-                const std::shared_ptr<const NHTTP::TRequest> request,
+                std::shared_ptr<const NHTTP::TRequest> request,
                 const std::vector<std::string>& args,
                 const size_t prefixLen
             );
 
             void Handle(
-                const std::shared_ptr<const NHTTP::TRequest> request,
+                std::shared_ptr<const NHTTP::TRequest> request,
                 const std::vector<std::string>& args
             ) override {
                 Handle(request, args, 0);

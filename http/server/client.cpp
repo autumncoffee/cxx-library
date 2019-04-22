@@ -62,7 +62,7 @@ namespace NAC {
 
         void TClient::HandleFrame(
             std::shared_ptr<NWebSocketParser::TFrame> frame,
-            const std::shared_ptr<const NHTTP::TRequest> //origin
+            std::shared_ptr<const NHTTP::TRequest> //origin
         ) {
             std::cerr << "[websocket frame ignored, opcode: " << (size_t)(frame->Opcode) << "]" << std::endl;
             // NWebSocketParser::TFrame out;
@@ -119,7 +119,7 @@ namespace NAC {
 
             try {
                 try {
-                    auto request_ = std::make_shared<NHTTP::TRequest>(data, responder);
+                    std::shared_ptr<NHTTP::TRequest> request_(new NHTTP::TRequest(data, responder));
                     auto request = std::shared_ptr<const NHTTP::TRequest>(request_, request_.get());
                     request_->SetWeakPtr(request);
 
@@ -139,7 +139,7 @@ namespace NAC {
             }
         }
 
-        void TClient::HandleRequestImpl(const std::shared_ptr<const NHTTP::TRequest> request) {
+        void TClient::HandleRequestImpl(std::shared_ptr<const NHTTP::TRequest> request) {
             std::cerr
                 << "[access] "
                 << request->FirstLine()
@@ -184,7 +184,7 @@ namespace NAC {
             return response;
         }
 
-        void TClient::OnWebSocketStart(const std::shared_ptr<const NHTTP::TRequest> request) {
+        void TClient::OnWebSocketStart(std::shared_ptr<const NHTTP::TRequest> request) {
             WebSocketOrigin = request;
             WebSocketParser.reset(new NWebSocketParser::TParser);
         }

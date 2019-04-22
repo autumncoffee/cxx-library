@@ -18,10 +18,13 @@ namespace NAC {
                 int WakeupFd;
                 std::shared_ptr<sockaddr_in> Addr;
                 TAddClient AddClient;
+
+                virtual ~TArgs() {
+                }
             };
 
         public:
-            explicit TBaseClient(const TArgs* const args);
+            explicit TBaseClient(TArgs* const args);
 
             TBaseClient() = delete;
             TBaseClient(const TBaseClient&) = delete;
@@ -62,7 +65,7 @@ namespace NAC {
                 const char* const host,
                 const short port,
                 const size_t maxRetries,
-                TArgs... forwardClientArgs
+                TArgs&&... forwardClientArgs
             ) const {
                 static_assert(std::is_base_of<TBaseClient, T>::value);
                 static_assert(std::is_base_of<TBaseClient::TArgs, typename T::TArgs>::value);
@@ -88,7 +91,7 @@ namespace NAC {
             }
 
         protected:
-            const std::unique_ptr<const TArgs> Args;
+            std::shared_ptr<TArgs> Args;
 
         private:
             std::weak_ptr<TBaseClient> SelfWeakPtr;
@@ -109,7 +112,7 @@ namespace NAC {
             };
 
         public:
-            explicit TNetClient(const TArgs* const args);
+            explicit TNetClient(TArgs* const args);
 
             void Cb(const NMuhEv::TEvSpec& event) override;
 

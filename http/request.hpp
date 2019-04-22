@@ -219,7 +219,7 @@ namespace NAC {
                 OnWebSocketStart();
             }
 
-            void SetWeakPtr(const std::shared_ptr<const TRequest>& ptr) {
+            void SetWeakPtr(std::shared_ptr<const TRequest>& ptr) {
                 Responder.SetRequestPtr(ptr);
             }
 

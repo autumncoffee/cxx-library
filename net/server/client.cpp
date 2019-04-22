@@ -7,7 +7,7 @@
 
 namespace NAC {
     namespace NNetServer {
-        TBaseClient::TBaseClient(const TArgs* const args)
+        TBaseClient::TBaseClient(TArgs* const args)
             : Args(args)
         {
         }
@@ -30,7 +30,7 @@ namespace NAC {
             SelfWeakPtr = ptr;
         }
 
-        TNetClient::TNetClient(const TArgs* const args)
+        TNetClient::TNetClient(TArgs* const args)
             : TBaseClient(args)
         {
             NSocketUtils::SetupSocket(Args->Fh, 1000); // TODO: check return value
@@ -169,6 +169,8 @@ namespace NAC {
 
         void TNetClient::Destroy() {
             bool _destroyed = Destroyed.exchange(true);
+
+            WakeLoop();
 
             if(_destroyed)
                 return;

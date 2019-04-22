@@ -39,16 +39,16 @@ namespace NAC {
 
             struct TArgs : public TBase::TArgs {
                 TCallback Cb;
-                std::shared_ptr<NNetServer::TBaseClient> OrigClient;
+                std::weak_ptr<NNetServer::TBaseClient> OrigClient;
 
                 template<typename... TArgs_>
                 TArgs(
                     TCallback&& cb,
                     std::shared_ptr<NNetServer::TBaseClient> origClient,
-                    TArgs_... args
+                    TArgs_&&... args
                 )
                     : TBase::TArgs(std::forward<TArgs_>(args)...)
-                    , Cb(cb)
+                    , Cb(std::forward<TCallback>(cb))
                     , OrigClient(origClient)
                 {
                 }
