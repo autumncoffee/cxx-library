@@ -39,7 +39,7 @@ namespace NAC {
 
             struct TArgs : public TBase::TArgs {
                 TCallback Cb;
-                std::weak_ptr<NNetServer::TBaseClient> OrigClient;
+                std::shared_ptr<NNetServer::TBaseClient> OrigClient;
 
                 template<typename... TArgs_>
                 TArgs(
