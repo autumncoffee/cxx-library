@@ -87,16 +87,9 @@ namespace NAC {
                         break;
                     }
 
-                    int written = 0;
+                    const int written = Write(*item, event.Ident);
 
-                    if (item->Dummy) {
-                        written = WriteToSocket(-1, nullptr, 0);
-
-                    } else {
-                        written = WriteToSocket(event.Ident, item->Data + item->Pos, item->Size - item->Pos);
-                    }
-
-                    if(written < 0) {
+                    if (written < 0) {
                         auto e = errno;
 
                         if((e != EAGAIN) && (e != EINTR)) {
@@ -108,17 +101,8 @@ namespace NAC {
                             break;
                         }
 
-                    } else {
-                        if (item->Dummy) {
-                            PopWriteItem();
-
-                        } else {
-                            item->Pos += written;
-
-                            if (item->Pos >= item->Size) {
-                                PopWriteItem();
-                            }
-                        }
+                    } else if (item->Dummy || (item->Pos >= item->Size)) {
+                        PopWriteItem();
                     }
                 }
             }
@@ -177,6 +161,49 @@ namespace NAC {
 
             shutdown(Args->Fh, SHUT_RDWR);
             close(Args->Fh);
+        }
+
+        void TNetClient::TWriteQueueItem::CalcSize() {
+            Size = 0;
+
+            for (const auto& node : Sequence) {
+                Size += node.Len;
+            }
+        }
+
+        int TNetClient::Write(TWriteQueueItem& item, const int fh) {
+            if (item.Dummy) {
+                return WriteToSocket(-1, nullptr, 0);
+            }
+
+            if (item.Size < 0) {
+                item.CalcSize();
+            }
+
+            int written = 0;
+
+            while (item.Pos < item.Size) {
+                size_t next = 0;
+                size_t len = 0;
+
+                const char* str = item.Sequence.Read(item.DataLast, item.DataPos, &len, &next);
+                written = WriteToSocket(fh, str, len);
+
+                if (written < 0) {
+                    break;
+
+                } else {
+                    if (next != item.DataLast) {
+                        item.DataLast = next;
+                        item.DataPos = 0;
+                    }
+
+                    item.Pos += written;
+                    item.DataPos += written;
+                }
+            }
+
+            return written;
         }
     }
 }

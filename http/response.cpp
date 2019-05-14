@@ -1,34 +1,42 @@
 #include "response.hpp"
-
+#include <utility>
 
 namespace NAC {
     namespace NHTTP {
-        TResponse::operator std::shared_ptr<NHTTPLikeParser::TParsedData>() const {
+        TBlob TResponse::Preamble() const {
             if (FirstLine_.empty()) {
                 throw std::logic_error("Reponse first line is empty");
             }
 
-            std::shared_ptr<NHTTPLikeParser::TParsedData> out;
-            out.reset(new NHTTPLikeParser::TParsedData);
-            auto&& response = *out;
-
-            response.Append(FirstLine_.size(), FirstLine_.data());
+            TBlob out;
+            out.Append(FirstLine_.size(), FirstLine_.data());
 
             for (const auto& header : Headers_) {
                 for (const auto& value : header.second) {
-                    response << header.first << ": " << value << "\r\n";
+                    out << header.first << ": " << value << "\r\n";
                 }
             }
 
-            response
+            return out;
+        }
+
+        TResponse::operator TBlobSequence() const {
+            auto preamble = Preamble();
+
+            preamble
                 << "Content-Length: "
                 << std::to_string(ContentLength())
                 << "\r\n\r\n"
             ;
 
+            TBlobSequence out;
+            out.Concat(std::move(preamble));
+
             if (ContentLength() > 0) {
-                response.Append(ContentLength(), Content());
+                out.Concat(ContentLength(), Content());
             }
+
+            out.MemorizeCopy(this);
 
             return out;
         }

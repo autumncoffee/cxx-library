@@ -31,4 +31,5 @@ target_link_libraries(
     ac_library_net_server
     ac_library_http_handler
     ac_library_http
+    ac_common
 )

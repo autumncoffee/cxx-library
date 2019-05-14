@@ -8,6 +8,8 @@
 #include <netdb.h>
 #include "add_client.hpp"
 #include <net/client/connect.hpp>
+#include <string_sequence.hpp>
+#include <utility>
 
 namespace NAC {
     namespace NNetServer {
@@ -102,13 +104,25 @@ namespace NAC {
             using TArgs = TBaseClient::TArgs;
 
             struct TWriteQueueItem {
-                size_t Pos = 0;
-                size_t Size = 0;
-                const char* Data = nullptr;
-                bool Dummy = false;
-
                 virtual ~TWriteQueueItem() {
                 }
+
+                void CalcSize();
+
+                template<typename... TArgs>
+                void Concat(TArgs&&... args) {
+                    Sequence.Concat(std::forward<TArgs>(args)...);
+                }
+
+            private:
+                size_t Pos = 0;
+                ssize_t Size = -1;
+                size_t DataLast = 0;
+                size_t DataPos = 0;
+                TBlobSequence Sequence;
+                bool Dummy = false;
+
+                friend class TNetClient;
             };
 
         public:
@@ -120,6 +134,14 @@ namespace NAC {
 
             void Drop() override {
                 Destroy();
+            }
+
+            template<typename... TArgs>
+            void PushWriteQueueData(TArgs&&... args) {
+                auto item = std::make_shared<TWriteQueueItem>();
+                item->Concat(std::forward<TArgs>(args)...);
+
+                PushWriteQueue(std::move(item));
             }
 
             virtual void PushWriteQueue(std::shared_ptr<TWriteQueueItem> data);
@@ -158,6 +180,8 @@ namespace NAC {
                 void* buf,
                 const size_t bufSize
             );
+
+            int Write(TWriteQueueItem& item, const int fh);
 
             virtual int WriteToSocket(
                 const int fh,

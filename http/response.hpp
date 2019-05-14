@@ -7,10 +7,13 @@
 #include <httplike/server/client.hpp>
 #include <httplike/parser/parser.hpp>
 #include <http/cookies.hpp>
+#include <str.hpp>
+#include <string_sequence.hpp>
+#include <tmpmem.hpp>
 
 namespace NAC {
     namespace NHTTP {
-        class TResponse {
+        class TResponse : public TWithTmpMem {
         public:
             TResponse() = default;
             TResponse(const TResponse&) = delete;
@@ -49,13 +52,19 @@ namespace NAC {
 
             template<typename... TArgs>
             TResponse& Reserve(TArgs&&... args) {
-                Body.Reserve(std::forward<TArgs&&>(args)...);
+                Body.Reserve(std::forward<TArgs>(args)...);
                 return *this;
             }
 
             template<typename... TArgs>
             TResponse& Write(TArgs&&... args) {
-                Body.Append(std::forward<TArgs&&>(args)...);
+                Body.Append(std::forward<TArgs>(args)...);
+                return *this;
+            }
+
+            template<typename... TArgs>
+            TResponse& Wrap(TArgs&&... args) {
+                Body.Wrap(std::forward<TArgs>(args)...);
                 return *this;
             }
 
@@ -75,7 +84,8 @@ namespace NAC {
                 return Body.Data();
             }
 
-            explicit operator std::shared_ptr<NHTTPLikeParser::TParsedData>() const;
+            TBlob Preamble() const;
+            explicit operator TBlobSequence() const;
 
         private:
             std::string FirstLine_;

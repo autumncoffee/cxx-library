@@ -83,14 +83,13 @@ namespace NAC {
             );
             auto&& item = *(TWriteQueueItem*)item_.get();
             item.Orig = (TBlob)frame;
-            item.Size = item.Orig.Size();
-            item.Data = item.Orig.Data();
+            item.Concat(item.Orig);
 
             PushWriteQueue(std::move(item_));
         }
 
         void TClient::PushWriteQueue(const NHTTP::TResponse& response) {
-            PushWriteQueue((std::shared_ptr<NHTTPLikeParser::TParsedData>)response);
+            PushWriteQueueData((TBlobSequence)response);
         }
 
         void TClient::Cb(const NMuhEv::TEvSpec& event) {
