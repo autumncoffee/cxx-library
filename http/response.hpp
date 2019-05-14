@@ -15,7 +15,12 @@ namespace NAC {
     namespace NHTTP {
         class TResponse : public TWithTmpMem {
         public:
-            TResponse() = default;
+            TResponse()
+                : Body(new TBlob)
+            {
+                Memorize(Body);
+            }
+
             TResponse(const TResponse&) = delete;
             TResponse(TResponse&&) = default;
 
@@ -52,19 +57,19 @@ namespace NAC {
 
             template<typename... TArgs>
             TResponse& Reserve(TArgs&&... args) {
-                Body.Reserve(std::forward<TArgs>(args)...);
+                Body->Reserve(std::forward<TArgs>(args)...);
                 return *this;
             }
 
             template<typename... TArgs>
             TResponse& Write(TArgs&&... args) {
-                Body.Append(std::forward<TArgs>(args)...);
+                Body->Append(std::forward<TArgs>(args)...);
                 return *this;
             }
 
             template<typename... TArgs>
             TResponse& Wrap(TArgs&&... args) {
-                Body.Wrap(std::forward<TArgs>(args)...);
+                Body->Wrap(std::forward<TArgs>(args)...);
                 return *this;
             }
 
@@ -77,11 +82,11 @@ namespace NAC {
             }
 
             size_t ContentLength() const {
-                return Body.Size();
+                return Body->Size();
             }
 
             const char* Content() const {
-                return Body.Data();
+                return Body->Data();
             }
 
             TBlob Preamble() const;
@@ -90,7 +95,7 @@ namespace NAC {
         private:
             std::string FirstLine_;
             NHTTPLikeParser::THeaders Headers_;
-            TBlob Body;
+            std::shared_ptr<TBlob> Body;
         };
     }
 }
