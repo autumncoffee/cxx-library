@@ -62,7 +62,7 @@ namespace NAC {
 
         void TClient::HandleFrame(
             std::shared_ptr<NWebSocketParser::TFrame> frame,
-            std::shared_ptr<const NHTTP::TRequest> //origin
+            std::shared_ptr<NHTTP::TRequest> //origin
         ) {
             std::cerr << "[websocket frame ignored, opcode: " << (size_t)(frame->Opcode) << "]" << std::endl;
             // NWebSocketParser::TFrame out;
@@ -115,12 +115,15 @@ namespace NAC {
 
         void TClient::HandleRequest(std::shared_ptr<NHTTPLikeParser::TParsedData> data) {
             TResponder responder(GetNewSharedPtr<TClient>());
+            auto&& requestFactory = ((TArgs*)Args.get())->RequestFactory;
 
             try {
                 try {
-                    std::shared_ptr<NHTTP::TRequest> request_(new NHTTP::TRequest(data, responder));
-                    auto request = std::shared_ptr<const NHTTP::TRequest>(request_, request_.get());
-                    request_->SetWeakPtr(request);
+                    std::shared_ptr<NHTTP::TRequest> request(requestFactory
+                        ? requestFactory(data, responder)
+                        : new NHTTP::TRequest(data, responder)
+                    );
+                    request->SetWeakPtr(request);
 
                     try {
                         HandleRequestImpl(request);
@@ -138,7 +141,7 @@ namespace NAC {
             }
         }
 
-        void TClient::HandleRequestImpl(std::shared_ptr<const NHTTP::TRequest> request) {
+        void TClient::HandleRequestImpl(std::shared_ptr<NHTTP::TRequest> request) {
             std::cerr
                 << "[access] "
                 << request->FirstLine()
@@ -151,7 +154,7 @@ namespace NAC {
             );
         }
 
-        void TClient::HandleException(const NHTTP::TRequest& request, const std::exception& e) {
+        void TClient::HandleException(NHTTP::TRequest& request, const std::exception& e) {
             std::cerr
                 << "[error] "
                 << request.FirstLine()
@@ -183,7 +186,7 @@ namespace NAC {
             return response;
         }
 
-        void TClient::OnWebSocketStart(std::shared_ptr<const NHTTP::TRequest> request) {
+        void TClient::OnWebSocketStart(std::shared_ptr<NHTTP::TRequest> request) {
             WebSocketOrigin = request;
             WebSocketParser.reset(new NWebSocketParser::TParser);
         }

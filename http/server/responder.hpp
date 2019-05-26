@@ -35,7 +35,7 @@ namespace NAC {
             ) const;
 
             void OnWebSocketStart() const;
-            void SetRequestPtr(std::shared_ptr<const NHTTP::TRequest>& ptr);
+            void SetRequestPtr(std::shared_ptr<NHTTP::TRequest>& ptr);
 
         private:
             std::shared_ptr<TClient> Client() const {
@@ -44,7 +44,7 @@ namespace NAC {
 
         private:
             std::weak_ptr<TClient> Client_;
-            std::weak_ptr<const NHTTP::TRequest> RequestPtr;
+            std::weak_ptr<NHTTP::TRequest> RequestPtr;
         };
     }
 }

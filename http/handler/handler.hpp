@@ -11,7 +11,7 @@ namespace NAC {
             virtual ~THandler();
 
             virtual void Handle(
-                std::shared_ptr<const NHTTP::TRequest> request,
+                std::shared_ptr<NHTTP::TRequest> request,
                 const std::vector<std::string>& args
             ) = 0;
         };

@@ -5,7 +5,7 @@
 namespace NAC {
     namespace NHTTPRouter {
         void TRouter::Handle(
-            std::shared_ptr<const NHTTP::TRequest> request,
+            std::shared_ptr<NHTTP::TRequest> request,
             const std::vector<std::string>& inputArgs,
             const size_t prefixLen
         ) {

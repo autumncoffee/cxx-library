@@ -102,7 +102,7 @@ namespace NAC {
         )
             : Data(data)
             , Responder(responder)
-            , ResponseSent(new std::atomic<bool>(false))
+            , ResponseSent(false)
         {
             std::queue<std::pair<std::string*, bool>> out {{
                 {&Method_, true},

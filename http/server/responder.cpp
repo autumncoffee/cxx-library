@@ -45,10 +45,10 @@ namespace NAC {
                 return;
             }
 
-            Client()->OnWebSocketStart((const std::shared_ptr<const NHTTP::TRequest>)RequestPtr);
+            Client()->OnWebSocketStart((const std::shared_ptr<NHTTP::TRequest>)RequestPtr);
         }
 
-        void TResponder::SetRequestPtr(std::shared_ptr<const NHTTP::TRequest>& ptr) {
+        void TResponder::SetRequestPtr(std::shared_ptr<NHTTP::TRequest>& ptr) {
             if(!RequestPtr.expired()) {
                 abort();
             }

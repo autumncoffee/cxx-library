@@ -10,7 +10,7 @@ TResponse Respond ## code() const { \
     return Respond(#code " " msg); \
 } \
 \
-void Send ## code() const { \
+void Send ## code() { \
     Send(Respond ## code()); \
 }
 
@@ -68,6 +68,9 @@ namespace NAC {
                 std::shared_ptr<NHTTPLikeParser::TParsedData> data,
                 const NHTTPServer::TResponder& responder
             );
+
+            virtual ~TRequest() {
+            }
 
             const std::string FirstLine() const {
                 return std::string(Data->FirstLine, Data->FirstLineSize);
@@ -163,8 +166,8 @@ namespace NAC {
                 return out;
             }
 
-            void Send(const TResponse& response) const {
-                if (ResponseSent->exchange(true)) {
+            void Send(const TResponse& response) {
+                if (ResponseSent.exchange(true)) {
                     throw std::runtime_error("Response sent twice: " + response.FirstLine());
                 }
 
@@ -176,7 +179,7 @@ namespace NAC {
             }
 
             bool IsResponseSent() const {
-                return ResponseSent->load();
+                return ResponseSent.load();
             }
 
             template<typename... TArgs>
@@ -206,7 +209,7 @@ namespace NAC {
                 return response;
             }
 
-            void SendWebSocketAccept() const {
+            void SendWebSocketAccept() {
                 Send(RespondWebSocketAccept());
             }
 
@@ -214,12 +217,12 @@ namespace NAC {
                 Responder.OnWebSocketStart();
             }
 
-            void WebSocketStart() const {
+            void WebSocketStart() {
                 SendWebSocketAccept();
                 OnWebSocketStart();
             }
 
-            void SetWeakPtr(std::shared_ptr<const TRequest>& ptr) {
+            void SetWeakPtr(std::shared_ptr<TRequest>& ptr) {
                 Responder.SetRequestPtr(ptr);
             }
 
@@ -237,7 +240,7 @@ namespace NAC {
             TContentTypeParams ContentTypeParams_;
             std::vector<TBodyPart> Parts_;
             NHTTPServer::TResponder Responder;
-            std::unique_ptr<std::atomic<bool>> ResponseSent;
+            std::atomic<bool> ResponseSent;
         };
     }
 }
