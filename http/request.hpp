@@ -1,9 +1,9 @@
 #pragma once
 
-#include <httplike/parser/parser.hpp>
+#include <ac-library/httplike/parser/parser.hpp>
 #include "response.hpp"
-#include <http/server/responder.hpp>
-#include <websocket/parser/parser.hpp>
+#include <ac-library/http/server/responder.hpp>
+#include <ac-library/websocket/parser/parser.hpp>
 
 #define AC_HTTP_REQUEST_CODE_SHORTCUT(code, msg) \
 TResponse Respond ## code() const { \

@@ -3,10 +3,10 @@
 #include <unordered_map>
 #include <string>
 #include <vector>
-#include <spin_lock.hpp>
+#include <ac-common/spin_lock.hpp>
 #include <memory>
 #include <string.h>
-#include <str.hpp>
+#include <ac-common/str.hpp>
 
 namespace NAC {
     namespace NHTTPLikeParser {

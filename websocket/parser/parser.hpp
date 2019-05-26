@@ -1,9 +1,9 @@
 #pragma once
 
-#include <str.hpp>
+#include <ac-common/str.hpp>
 #include <memory>
 #include <vector>
-#include <utils/string.hpp>
+#include <ac-common/utils/string.hpp>
 
 namespace NAC {
     namespace NWebSocketParser {

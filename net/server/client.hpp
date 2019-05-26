@@ -1,14 +1,14 @@
 #pragma once
 
-#include <spin_lock.hpp>
+#include <ac-common/spin_lock.hpp>
 #include <queue>
-#include <muhev.hpp>
+#include <ac-common/muhev.hpp>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #include "add_client.hpp"
-#include <net/client/connect.hpp>
-#include <string_sequence.hpp>
+#include <ac-library/net/client/connect.hpp>
+#include <ac-common/string_sequence.hpp>
 #include <utility>
 
 namespace NAC {

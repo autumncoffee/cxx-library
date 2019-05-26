@@ -1,9 +1,9 @@
 #pragma once
 
-#include <http/response.hpp>
+#include <ac-library/http/response.hpp>
 #include <functional>
-#include <httplike/server/client.hpp>
-#include <websocket/parser/parser.hpp>
+#include <ac-library/httplike/server/client.hpp>
+#include <ac-library/websocket/parser/parser.hpp>
 
 namespace NAC {
     namespace NHTTP {

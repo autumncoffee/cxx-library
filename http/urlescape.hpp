@@ -2,7 +2,7 @@
 
 #include <sys/types.h>
 #include <string>
-#include <str.hpp>
+#include <ac-common/str.hpp>
 
 namespace NAC {
     namespace NHTTP {

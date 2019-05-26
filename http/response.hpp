@@ -4,12 +4,12 @@
 #include <string.h>
 #include <utility>
 #include <memory>
-#include <httplike/server/client.hpp>
-#include <httplike/parser/parser.hpp>
-#include <http/cookies.hpp>
-#include <str.hpp>
-#include <string_sequence.hpp>
-#include <tmpmem.hpp>
+#include <ac-library/httplike/server/client.hpp>
+#include <ac-library/httplike/parser/parser.hpp>
+#include <ac-library/http/cookies.hpp>
+#include <ac-common/str.hpp>
+#include <ac-common/string_sequence.hpp>
+#include <ac-common/tmpmem.hpp>
 
 namespace NAC {
     namespace NHTTP {

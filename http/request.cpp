@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <utility>
 #include <queue>
-#include <utils/string.hpp>
+#include <ac-common/utils/string.hpp>
 #include <openssl/sha.h>
 #include <openssl/evp.h>
 // #include <iostream>
