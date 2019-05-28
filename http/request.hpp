@@ -158,6 +158,7 @@ namespace NAC {
             AC_HTTP_REQUEST_CODE_SHORTCUT(400, "Bad Request");
             AC_HTTP_REQUEST_CODE_SHORTCUT(403, "Forbidden");
             AC_HTTP_REQUEST_CODE_SHORTCUT(404, "Not Found");
+            AC_HTTP_REQUEST_CODE_SHORTCUT(500, "Internal Server Error");
 
             template<typename... TArgs>
             TResponse RespondContent(TArgs&&... args) const {
