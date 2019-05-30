@@ -9,11 +9,14 @@ namespace NAC {
         std::string Name;
         size_t Index;
 
+        virtual ~TWiredTigerFieldBase() {
+        }
+
     public:
-        virtual std::string Format() const;
-        virtual std::function<void*()> Load(void*) const;
-        virtual size_t DumpedSize(void*, const void*) const;
-        virtual void Dump(void*, const void*) const;
+        virtual std::string Format() const = 0;
+        virtual std::function<void*()> Load(void*) const = 0;
+        virtual size_t DumpedSize(void*, const void*) const = 0;
+        virtual void Dump(void*, const void*) const = 0;
     };
 
     template<typename T>
@@ -25,6 +28,24 @@ namespace NAC {
         TValue Value;
     };
 
-    using TWiredTigerUIntField = TWiredTigerField<uint64_t>;
-    using TWiredTigerStringField = TWiredTigerField<std::string>;
+    class TWiredTigerUIntField : public TWiredTigerField<uint64_t> {
+    public:
+        std::string Format() const override;
+        std::function<void*()> Load(void*) const override;
+        size_t DumpedSize(void*, const void*) const override;
+        void Dump(void*, const void*) const override;
+    };
+
+    class TWiredTigerAutoincrementField : public TWiredTigerUIntField {
+    public:
+        std::string Format() const override;
+    };
+
+    class TWiredTigerStringField : public TWiredTigerField<std::string> {
+    public:
+        std::string Format() const override;
+        std::function<void*()> Load(void*) const override;
+        size_t DumpedSize(void*, const void*) const override;
+        void Dump(void*, const void*) const override;
+    };
 }

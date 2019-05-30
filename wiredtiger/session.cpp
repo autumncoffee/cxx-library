@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <memory>
 #include <utility>
+#include <iostream>
 
 namespace NAC {
     class TWiredTigerSessionImpl {
@@ -26,6 +27,13 @@ namespace NAC {
                     abort();
                 }
             });
+        }
+
+        ~TWiredTigerSessionImpl() {
+            if ((ActiveTransactions > 0) || (RefCount > 0)) {
+                std::cerr << "[WiredTiger] Something went terribly wrong; ActiveTransactions=" << ActiveTransactions << ", RefCount=" << RefCount << std::endl;
+                abort();
+            }
         }
 
         void CreateTable(
@@ -147,7 +155,7 @@ namespace NAC {
 
         bool Append(
             const std::string& dbName,
-            TWiredTigerModelBase& key_,
+            TWiredTigerModelBase* key_,
             const TWiredTigerModelBase& value_
         ) {
             auto cursor = Cursor(("table:" + dbName), "raw,overwrite=false,append=true");
@@ -163,12 +171,17 @@ namespace NAC {
             int result = cursor->insert(cursor.get());
 
             if (result == 0) {
-                WT_ITEM key;
-                result = cursor->get_key(cursor.get(), &key);
+                if (key_) {
+                    WT_ITEM key;
+                    result = cursor->get_key(cursor.get(), &key);
 
-                if (result == 0) {
-                    key_.Load((void*)Session.get(), key.size, key.data);
+                    if (result == 0) {
+                        key_->Load((void*)Session.get(), key.size, key.data);
 
+                        return true;
+                    }
+
+                } else {
                     return true;
                 }
 
@@ -222,12 +235,17 @@ namespace NAC {
 
         TWiredTigerIterator Search(
             const std::string& tableName,
-            const std::string& indexName,
+            const std::string* indexName,
             const std::string& valueFieldNames,
             const TWiredTigerModelBase& key_,
             int direction
         ) {
-            auto cursor = Cursor(("index:" + tableName + ":" + indexName + "(" + valueFieldNames + ")"), "raw");
+            auto cursor = Cursor((
+                (indexName
+                    ? ("index:" + tableName + ":" + *indexName)
+                    : ("table:" + tableName)
+                ) + "(" + valueFieldNames + ")"
+            ), "raw");
             auto keyBlob = key_.Dump((void*)Session.get());
             WT_ITEM key {
                 .data = keyBlob.Data(),
@@ -255,17 +273,56 @@ namespace NAC {
             return (cursor->remove(cursor.get()) == 0);
         }
 
+        TWiredTigerIterator SeqScan(
+            const std::string& dbName,
+            const std::string& valueFieldNames,
+            int direction
+        ) {
+            auto cursor = Cursor(("table:" + dbName + "(" + valueFieldNames + ")"), "raw");
+
+            return TWiredTigerIterator(std::shared_ptr<void>(cursor, (void*)cursor.get()), direction, TBlob());
+        }
+
+        TWiredTigerTransaction Begin(const char* options) {
+            if (ActiveTransactions == 0) {
+                new (&Transaction_) TWiredTigerTransaction(Session.get(), ActiveTransactions, options);
+            }
+
+            return *(TWiredTigerTransaction*)&Transaction_;
+        }
+
+        void Ref() {
+            ++RefCount;
+        }
+
+        bool UnRef() {
+            return (--RefCount == 0);
+        }
+
     private:
         std::shared_ptr<WT_SESSION> Session;
+        size_t RefCount = 0;
+        size_t ActiveTransactions = 0;
+        unsigned char Transaction_[sizeof(TWiredTigerTransaction)];
     };
 
     TWiredTigerSession::TWiredTigerSession(void* ptr)
         : Impl(new TWiredTigerSessionImpl((WT_SESSION*)ptr))
     {
+        Impl->Ref();
+    }
+
+    TWiredTigerSession::TWiredTigerSession(const TWiredTigerSession& right)
+        : Impl(right.Impl)
+    {
+        Impl->Ref();
     }
 
     TWiredTigerSession::~TWiredTigerSession() {
-        delete Impl;
+        if (Impl && Impl->UnRef()) {
+            delete Impl;
+            Impl = nullptr;
+        }
     }
 
     void TWiredTigerSession::CreateTable(
@@ -303,7 +360,7 @@ namespace NAC {
 
     bool TWiredTigerSession::Append(
         const std::string& dbName,
-        TWiredTigerModelBase& key,
+        TWiredTigerModelBase* key,
         const TWiredTigerModelBase& data
     ) {
         return Impl->Append(dbName, key, data);
@@ -319,7 +376,7 @@ namespace NAC {
 
     TWiredTigerIterator TWiredTigerSession::Search(
         const std::string& tableName,
-        const std::string& indexName,
+        const std::string* indexName,
         const std::string& valueFieldNames,
         const TWiredTigerModelBase& key,
         int direction
@@ -332,5 +389,17 @@ namespace NAC {
         const TWiredTigerModelBase& key
     ) {
         return Impl->Remove(dbName, key);
+    }
+
+    TWiredTigerIterator TWiredTigerSession::SeqScan(
+        const std::string& dbName,
+        const std::string& valueFieldNames,
+        int direction
+    ) {
+        return Impl->SeqScan(dbName, valueFieldNames, direction);
+    }
+
+    TWiredTigerTransaction TWiredTigerSession::Begin(const char* options) {
+        return Impl->Begin(options);
     }
 }

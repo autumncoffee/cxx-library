@@ -20,7 +20,8 @@ namespace NAC {
 
         ~TWiredTigerIterator();
 
-        bool Next(TWiredTigerModelBase& out);
+        bool Next(TWiredTigerModelBase& value);
+        bool Next(TWiredTigerModelBase& key, TWiredTigerModelBase& value);
 
     private:
         TWiredTigerIteratorImpl* Impl;

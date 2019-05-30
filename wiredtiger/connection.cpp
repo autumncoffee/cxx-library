@@ -16,7 +16,7 @@ namespace NAC {
             int result = wiredtiger_open(
                 path.c_str(),
                 nullptr,
-                (options ? options : "create,cache_size=5GB,eviction=(threads_max=20,threads_min=5),eviction_dirty_target=30,eviction_target=40,eviction_trigger=60,session_max=10000,log=(enabled=true,file_max=100MB),statistics=(all,clear),statistics_log=(wait=1)"),
+                (options ? options : "create,cache_size=5GB,eviction=(threads_max=20,threads_min=5),eviction_dirty_target=30,eviction_target=40,eviction_trigger=60,session_max=10000,log=(enabled=true,file_max=100MB)"),
                 &db
             );
 

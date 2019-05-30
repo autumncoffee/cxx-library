@@ -14,10 +14,11 @@ namespace NAC {
             : Cursor(data, (WT_CURSOR*)data.get())
             , Direction(direction)
             , Key(std::move(key))
+            , First(Key.Data() ? true : false)
         {
         }
 
-        bool Next(TWiredTigerModelBase& out) {
+        bool Next(TWiredTigerModelBase* key_, TWiredTigerModelBase& value_) {
             int result;
 
             if (First) {
@@ -50,13 +51,31 @@ namespace NAC {
             }
 
             if (result == 0) {
-                WT_ITEM value;
-                result = Cursor->get_value(Cursor.get(), &value);
+                WT_ITEM item;
+                result = Cursor->get_value(Cursor.get(), &item);
 
                 if (result == 0) {
-                    out.Load((void*)Cursor->session, value.size, value.data);
+                    value_.Load((void*)Cursor->session, item.size, item.data);
 
-                    return true;
+                    if (key_) {
+                        result = Cursor->get_key(Cursor.get(), &item);
+
+                        if (result == 0) {
+                            key_->Load((void*)Cursor->session, item.size, item.data);
+
+                            return true;
+
+                        } else {
+                            dprintf(
+                                2,
+                                "Failed to unpack record: %s\n",
+                                wiredtiger_strerror(result)
+                            );
+                        }
+
+                    } else {
+                        return true;
+                    }
 
                 } else {
                     dprintf(
@@ -81,7 +100,7 @@ namespace NAC {
         std::shared_ptr<WT_CURSOR> Cursor;
         int Direction;
         TBlob Key;
-        bool First = true;
+        bool First;
     };
 
     TWiredTigerIterator::TWiredTigerIterator(const std::shared_ptr<void>& data, int direction, TBlob&& key)
@@ -93,7 +112,11 @@ namespace NAC {
         delete Impl;
     }
 
-    bool TWiredTigerIterator::Next(TWiredTigerModelBase& out) {
-        return Impl->Next(out);
+    bool TWiredTigerIterator::Next(TWiredTigerModelBase& value) {
+        return Impl->Next(nullptr, value);
+    }
+
+    bool TWiredTigerIterator::Next(TWiredTigerModelBase& key, TWiredTigerModelBase& value) {
+        return Impl->Next(&key, value);
     }
 }

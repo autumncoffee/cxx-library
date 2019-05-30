@@ -31,6 +31,9 @@ namespace NAC {
                         return new T(args);
                     };
                 }
+
+                virtual ~TArgs() {
+                }
             };
 
         public:

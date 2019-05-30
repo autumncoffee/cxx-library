@@ -29,8 +29,14 @@ namespace {
 }
 
 namespace NAC {
+    class TWiredTigerModelDescrBase {
+    public:
+        virtual ~TWiredTigerModelDescrBase() {
+        }
+    };
+
     template<typename TKey_, typename TValue_>
-    class TWiredTigerModelDescr {
+    class TWiredTigerModelDescr : public TWiredTigerModelDescrBase {
     public:
         using TKey = TKey_;
         using TValue = TValue_;
@@ -42,8 +48,14 @@ namespace NAC {
         }
     };
 
+    class TWiredTigerIndexDescrBase {
+    public:
+        virtual ~TWiredTigerIndexDescrBase() {
+        }
+    };
+
     template<typename TWiredTigerModelDescr, typename TKey_>
-    class TWiredTigerIndexDescr {
+    class TWiredTigerIndexDescr : public TWiredTigerIndexDescrBase {
     public:
         using TModel = TWiredTigerModelDescr;
         using TKey = TKey_;
@@ -197,6 +209,9 @@ namespace NAC {
     public:
         void Load(void*, size_t, const void*);
         TBlob Dump(void*) const;
+
+        virtual ~TWiredTigerModelBase() {
+        }
 
     protected:
         virtual const __TACModelFieldMap& __GetACModelFieldMap() const = 0;
