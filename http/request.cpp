@@ -327,5 +327,76 @@ namespace NAC {
 
             return std::string((const char*)out, outLen);
         }
+
+        TRangeHeaderValue TRequest::Range() const {
+            const auto& raw = HeaderValue("range");
+            TRangeHeaderValue out;
+
+            if (raw.empty()) {
+                return out;
+            }
+
+            const size_t rawSize(raw.size());
+            TBlob tmp;
+            TRangeSpec tmpSpec;
+
+            tmp.Reserve(5);
+
+            for (size_t i = 0; i < rawSize; ++i) {
+                const char chr(raw[i]);
+
+                if ((chr != ' ') && (chr != ',') && (chr != '=') && (chr != '-')) {
+                    tmp.Append(1, &chr);
+                }
+
+                if (chr == '=') {
+                    if (out.Unit.empty()) {
+                        out.Unit = (std::string)tmp;
+                        tmp.Shrink(0);
+
+                    } else {
+                        throw std::logic_error("Invalid range header");
+                    }
+
+                    if (i == (rawSize - 1)) {
+                        throw std::logic_error("Invalid range: either start or end should be present");
+                    }
+
+                } else if (chr == '-') {
+                    if (tmp.Size() > 0) {
+                        tmpSpec.Start = NStringUtils::FromString<size_t>(tmp);
+                        tmp.Shrink(0);
+                    }
+
+                    if (i == (rawSize - 1)) {
+                        if (!tmpSpec.Start) {
+                            throw std::logic_error("Invalid range: either start or end should be present");
+                        }
+
+                        out.Ranges.emplace_back(std::move(tmpSpec));
+                    }
+
+                } else if ((chr == ',') || (i == (rawSize - 1))) {
+                    if (tmp.Size() > 0) {
+                        tmpSpec.End = NStringUtils::FromString<size_t>(tmp);
+                        tmp.Shrink(0);
+                    }
+
+                    if (tmpSpec.Start) {
+                        if (tmpSpec.End && (*tmpSpec.End <= *tmpSpec.Start)) {
+                            throw std::logic_error("Invalid range: end should be greater than start");
+                        }
+
+                    } else if (!tmpSpec.End) {
+                        throw std::logic_error("Invalid range: either start or end should be present");
+                    }
+
+                    out.Ranges.emplace_back(std::move(tmpSpec));
+                    tmpSpec = decltype(tmpSpec)();
+                }
+            }
+
+            return out;
+        }
     }
 }

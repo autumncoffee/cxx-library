@@ -92,10 +92,15 @@ namespace NAC {
             TBlob Preamble() const;
             explicit operator TBlobSequence() const;
 
+            void DoNotAddContentLength() {
+                AddContentLength_ = false;
+            }
+
         private:
             std::string FirstLine_;
             NHTTPLikeParser::THeaders Headers_;
             std::shared_ptr<TBlob> Body;
+            bool AddContentLength_ = true;
         };
     }
 }

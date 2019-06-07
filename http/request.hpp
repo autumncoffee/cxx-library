@@ -4,6 +4,8 @@
 #include "response.hpp"
 #include <ac-library/http/server/responder.hpp>
 #include <ac-library/websocket/parser/parser.hpp>
+#include <ac-common/maybe.hpp>
+#include <utility>
 
 #define AC_HTTP_REQUEST_CODE_SHORTCUT(code, msg) \
 TResponse Respond ## code() const { \
@@ -14,6 +16,11 @@ void Send ## code() { \
     Send(Respond ## code()); \
 }
 
+#define AC_HTTP_REQUEST_SEND(type) \
+void Send(type data) const { \
+    Responder.Send(std::forward<type>(data)); \
+}
+
 namespace NAC {
     namespace NHTTP {
         using THeaders = NHTTPLikeParser::THeaders;
@@ -21,6 +28,16 @@ namespace NAC {
         using TCookies = std::unordered_map<std::string, std::string>;
         using TContentTypeParams = std::unordered_map<std::string, std::string>;
         using TContentDispositionParams = TContentTypeParams;
+
+        struct TRangeSpec {
+            TMaybe<size_t> Start;
+            TMaybe<size_t> End;
+        };
+
+        struct TRangeHeaderValue {
+            std::string Unit;
+            std::vector<TRangeSpec> Ranges;
+        };
 
         class TBodyPart {
         public:
@@ -154,11 +171,7 @@ namespace NAC {
                 return out;
             }
 
-            AC_HTTP_REQUEST_CODE_SHORTCUT(200, "OK");
-            AC_HTTP_REQUEST_CODE_SHORTCUT(400, "Bad Request");
-            AC_HTTP_REQUEST_CODE_SHORTCUT(403, "Forbidden");
-            AC_HTTP_REQUEST_CODE_SHORTCUT(404, "Not Found");
-            AC_HTTP_REQUEST_CODE_SHORTCUT(500, "Internal Server Error");
+            #include "request.status_codes"
 
             template<typename... TArgs>
             TResponse RespondContent(TArgs&&... args) const {
@@ -175,9 +188,11 @@ namespace NAC {
                 Responder.Respond(response);
             }
 
-            void Send(const NWebSocketParser::TFrame& frame) const {
-                Responder.Send(frame);
-            }
+            AC_HTTP_REQUEST_SEND(const NWebSocketParser::TFrame&);
+            AC_HTTP_REQUEST_SEND(const TBlob&);
+            AC_HTTP_REQUEST_SEND(TBlob&&);
+            AC_HTTP_REQUEST_SEND(const TBlobSequence&);
+            AC_HTTP_REQUEST_SEND(TBlobSequence&&);
 
             bool IsResponseSent() const {
                 return ResponseSent.load();
@@ -201,7 +216,7 @@ namespace NAC {
             std::string GenerateSecWebSocketAccept() const;
 
             TResponse RespondWebSocketAccept() const {
-                auto response = Respond("101 Switching Protocols");
+                auto response = Respond101();
 
                 response.Header("Connection", "Upgrade");
                 response.Header("Upgrade", "websocket");
@@ -226,6 +241,8 @@ namespace NAC {
             void SetWeakPtr(std::shared_ptr<TRequest>& ptr) {
                 Responder.SetRequestPtr(ptr);
             }
+
+            TRangeHeaderValue Range() const;
 
         private:
             void ParseParts();

@@ -3,6 +3,15 @@
 #include <ac-library/http/request.hpp>
 #include <stdlib.h>
 
+#define AC_HTTP_REPONDER_SEND_IMPL(type) \
+void TResponder::Send(type data) const { \
+    if (Client_.expired()) { \
+        return; \
+    } \
+    \
+    Client()->PushWriteQueueData(data); \
+}
+
 namespace NAC {
     namespace NHTTPServer {
         TResponder::TResponder(std::shared_ptr<TClient> client)
@@ -55,5 +64,10 @@ namespace NAC {
 
             RequestPtr = ptr;
         }
+
+        AC_HTTP_REPONDER_SEND_IMPL(const TBlob&);
+        AC_HTTP_REPONDER_SEND_IMPL(TBlob&&);
+        AC_HTTP_REPONDER_SEND_IMPL(const TBlobSequence&);
+        AC_HTTP_REPONDER_SEND_IMPL(TBlobSequence&&);
     }
 }

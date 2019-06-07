@@ -4,6 +4,8 @@
 #include <functional>
 #include <ac-library/httplike/server/client.hpp>
 #include <ac-library/websocket/parser/parser.hpp>
+#include <ac-common/str.hpp>
+#include <ac-common/string_sequence.hpp>
 
 namespace NAC {
     namespace NHTTP {
@@ -26,6 +28,12 @@ namespace NAC {
 
             void Respond(const NHTTP::TResponse& response) const;
             void Send(const NWebSocketParser::TFrame& response) const;
+
+            void Send(const TBlob&) const;
+            void Send(TBlob&&) const;
+
+            void Send(const TBlobSequence&) const;
+            void Send(TBlobSequence&&) const;
 
             std::shared_ptr<TResponder::TAwaitHTTPClient> AwaitHTTP(
                 const char* const host,

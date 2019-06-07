@@ -23,11 +23,15 @@ namespace NAC {
         TResponse::operator TBlobSequence() const {
             auto preamble = Preamble();
 
-            preamble
-                << "Content-Length: "
-                << std::to_string(ContentLength())
-                << "\r\n\r\n"
-            ;
+            if (AddContentLength_) {
+                preamble
+                    << "Content-Length: "
+                    << std::to_string(ContentLength())
+                    << "\r\n"
+                ;
+            }
+
+            preamble << "\r\n";
 
             TBlobSequence out;
             out.Concat(std::move(preamble));
