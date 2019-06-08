@@ -35,6 +35,7 @@ target_link_libraries(
     ac_library_httplike_server
     ac_library_httplike_parser
     ac_library_http_server
+    ac_library_http_utils
     ac_library_websocket_parser
     ac_common_utils
     "-lcrypto"

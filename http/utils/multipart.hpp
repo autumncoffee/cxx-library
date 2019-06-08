@@ -1,26 +1,85 @@
+#pragma once
+
 #include <string>
-#include <random>
-#include <string.h>
+#include "headers.hpp"
+#include <ac-library/httplike/parser/parser.hpp>
+#include <memory>
+#include <utility>
 
 namespace NAC {
+    namespace NHTTP {
+        class TBodyPart;
+        class TWithBodyParts;
+    }
+
     namespace NHTTPUtils {
-        static inline std::string Boundary() {
-            static const char* Chars("-_1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
-            static const size_t CharsSize(strlen(Chars));
-            static const size_t OutSize(40);
+        std::string Boundary();
 
-            std::string out;
-            out.reserve(OutSize);
+        std::vector<NHTTP::TBodyPart> ParseParts(
+            const std::string& boundary,
+            size_t size,
+            const char* data
+        );
+    }
 
-            thread_local static std::random_device rd;
-            thread_local static std::mt19937 g(rd());
-            thread_local static std::uniform_int_distribution<size_t> dis(0, (CharsSize - 1));
+    namespace NHTTP {
+        class TBodyPart {
+        public:
+            explicit TBodyPart(std::shared_ptr<NHTTPLikeParser::TParsedData> data);
 
-            for (size_t i = 0; i < OutSize; ++i) {
-                out += Chars[dis(g)];
+            const THeaders& Headers() const {
+                return Data->Headers;
             }
 
-            return out;
-        }
+            size_t ContentLength() const {
+                return Data->BodySize;
+            }
+
+            const char* Content() const {
+                return Data->Body;
+            }
+
+            const std::string& ContentType() const {
+                return ContentType_;
+            }
+
+            const THeaderParams& ContentTypeParams() const {
+                return ContentTypeParams_;
+            }
+
+            const std::string& ContentDisposition() const {
+                return ContentDisposition_;
+            }
+
+            const THeaderParams& ContentDispositionParams() const {
+                return ContentDispositionParams_;
+            }
+
+        private:
+            std::shared_ptr<NHTTPLikeParser::TParsedData> Data;
+            std::string ContentType_;
+            THeaderParams ContentTypeParams_;
+            std::string ContentDisposition_;
+            THeaderParams ContentDispositionParams_;
+        };
+
+        class TWithBodyParts {
+        public:
+            virtual ~TWithBodyParts() {
+            }
+
+            const std::vector<TBodyPart>& Parts() const {
+                return Parts_;
+            }
+
+        protected:
+            template<typename... TArgs>
+            void ParseParts(TArgs&&... args) {
+                Parts_ = NHTTPUtils::ParseParts(std::forward<TArgs>(args)...);
+            }
+
+        private:
+            std::vector<TBodyPart> Parts_;
+        };
     }
 }

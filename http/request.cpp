@@ -6,101 +6,16 @@
 #include <ac-common/utils/string.hpp>
 #include <openssl/sha.h>
 #include <openssl/evp.h>
+#include <ctype.h>
 // #include <iostream>
-
-namespace {
-    template<typename TContentTypeParams>
-    void ParseContentType(
-        const NAC::NHTTP::THeaders& headers,
-        const std::string& headersKey,
-        std::string& contentTypeDest,
-        TContentTypeParams& contentTypeParamsDest
-    ) {
-        const auto& contentType_ = headers.find(headersKey);
-
-        if (contentType_ != headers.end()) {
-            const auto& contentType = contentType_->second.front();
-
-            size_t i = 0;
-            size_t offset = 0;
-            bool inKey = true;
-            bool haveKey = false;
-            bool inQueryParams = false;
-            std::string key;
-
-            for (; i < contentType.size(); ++i) {
-                const char chr = contentType[i];
-                const bool isLast = (i == (contentType.size() - 1));
-
-                if(!inQueryParams && (isLast || (chr == ';'))) {
-                    NAC::NStringUtils::Strip(
-                        (i + (isLast ? 1 : 0) - offset),
-                        contentType.data() + offset,
-                        contentTypeDest
-                    );
-
-                    std::transform(contentTypeDest.begin(), contentTypeDest.end(), contentTypeDest.begin(), tolower);
-
-                    inQueryParams = true;
-                    offset = i + 1;
-                    continue;
-                }
-
-                if(!inQueryParams)
-                    continue;
-
-                if ((chr == ' ') && inKey && (!haveKey)) {
-                    offset = i + 1;
-                }
-
-                if(inKey)
-                    haveKey = true;
-
-                if (chr == '=') {
-                    NAC::NStringUtils::Strip(
-                        i - offset,
-                        contentType.data() + offset,
-                        key
-                    );
-
-                    std::transform(key.begin(), key.end(), key.begin(), tolower);
-
-                    offset = i + 1;
-                    inKey = false;
-
-                } else if ((chr == ';') || isLast) {
-                    std::string value;
-
-                    NAC::NStringUtils::Strip(
-                        i + (isLast ? 1 : 0) - offset,
-                        contentType.data() + offset,
-                        value
-                    );
-
-                    contentTypeParamsDest.emplace(key, std::move(value));
-                    offset = i + 1;
-                    inKey = true;
-                    haveKey = false;
-                }
-            }
-        }
-    }
-}
 
 namespace NAC {
     namespace NHTTP {
-        TBodyPart::TBodyPart(std::shared_ptr<NHTTPLikeParser::TParsedData> data)
-            : Data(data)
-        {
-            ParseContentType(Headers(), "content-type", ContentType_, ContentTypeParams_);
-            ParseContentType(Headers(), "content-disposition", ContentDisposition_, ContentDispositionParams_);
-        }
-
         TRequest::TRequest(
             std::shared_ptr<NHTTPLikeParser::TParsedData> data,
             const NHTTPServer::TResponder& responder
         )
-            : Data(data)
+            : TMessageBase(data)
             , Responder(responder)
             , ResponseSent(false)
         {
@@ -113,14 +28,14 @@ namespace NAC {
             size_t offset = 0;
             size_t i = 0;
 
-            for (; i < Data->FirstLineSize; ++i) {
-                const bool isLast = (i == (Data->FirstLineSize - 1));
+            for (; i < data->FirstLineSize; ++i) {
+                const bool isLast = (i == (data->FirstLineSize - 1));
 
-                if ((Data->FirstLine[i] == ' ') || isLast) {
+                if ((data->FirstLine[i] == ' ') || isLast) {
                     auto&& spec = out.front();
                     auto* str = std::get<0>(spec);
 
-                    str->assign(Data->FirstLine + offset, i + (isLast ? 1 : 0) - offset);
+                    str->assign(data->FirstLine + offset, i + (isLast ? 1 : 0) - offset);
 
                     if(std::get<1>(spec))
                         std::transform(str->begin(), str->end(), str->begin(), tolower);
@@ -246,61 +161,6 @@ namespace NAC {
                         haveKey = false;
                     }
                 }
-            }
-
-            ParseContentType(headers, "content-type", ContentType_, ContentTypeParams_);
-
-            ParseParts();
-        }
-
-        void TRequest::ParseParts() {
-            // std::cerr << std::endl << std::endl << "------------" << std::endl << std::endl << std::endl;
-            const auto& contentType = ContentType();
-
-            if (strncmp(contentType.data(), "multipart/", 10) != 0) {
-                return;
-            }
-
-            const auto& boundary_ = ContentTypeParams_.find("boundary");
-
-            if (boundary_ == ContentTypeParams_.end()) {
-                return;
-            }
-
-            std::string boundary;
-            boundary.reserve(boundary_->second.size() + 2);
-            boundary += "--";
-            boundary += boundary_->second;
-
-            const char* pos = Content();
-            const char* end = pos + ContentLength();
-            const char* nextPos;
-            bool isFirst = true;
-
-            NHTTPLikeParser::TParser parser;
-
-            while ((pos = std::search(pos, end, boundary.begin(), boundary.end())) != end) {
-                if(isFirst) {
-                    isFirst = false;
-                    boundary = std::string("\r\n") + boundary;
-                }
-
-                pos += boundary.size();
-
-                nextPos = std::search(pos, end, boundary.begin(), boundary.end());
-
-                if(nextPos == end) {
-                    break;
-                }
-
-                parser.MessageNoFirstLine((uintptr_t)nextPos - (uintptr_t)pos, (char*)pos);
-                pos = nextPos;
-            }
-
-            const auto& parts = parser.ExtractData();
-
-            for(const auto& part : parts) {
-                Parts_.emplace_back(part);
             }
         }
 

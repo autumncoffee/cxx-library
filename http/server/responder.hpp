@@ -6,6 +6,7 @@
 #include <ac-library/websocket/parser/parser.hpp>
 #include <ac-common/str.hpp>
 #include <ac-common/string_sequence.hpp>
+#include <ac-library/http/server/await_client_fwd.hpp>
 
 namespace NAC {
     namespace NHTTP {
@@ -17,7 +18,8 @@ namespace NAC {
 
         class TResponder {
         public:
-            using TAwaitHTTPClient = NHTTPLikeServer::TAwaitClient<NHTTPLikeServer::TClient>;
+            using TAwaitHTTPClient = NHTTPServer::TAwaitClient<>;
+            using TAwaitHTTPLikeClient = NHTTPLikeServer::TAwaitClient<>;
 
         public:
             TResponder(std::shared_ptr<TClient> client);
@@ -38,7 +40,22 @@ namespace NAC {
             std::shared_ptr<TResponder::TAwaitHTTPClient> AwaitHTTP(
                 const char* const host,
                 const short port,
-                TAwaitHTTPClient::TCallback&& cb,
+                TAwaitClientCallback<>&& cb,
+                const size_t maxRetries = 3
+            ) const;
+
+            std::shared_ptr<TResponder::TAwaitHTTPClient> AwaitHTTP(
+                const char* const host,
+                const short port,
+                TAwaitClientCallback<>&& cb,
+                TAwaitClientWSCallback<>&& wscb,
+                const size_t maxRetries = 3
+            ) const;
+
+            std::shared_ptr<TResponder::TAwaitHTTPLikeClient> AwaitHTTPLike(
+                const char* const host,
+                const short port,
+                TAwaitHTTPLikeClient::TCallback&& cb,
                 const size_t maxRetries = 3
             ) const;
 

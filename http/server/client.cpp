@@ -4,11 +4,11 @@
 
 namespace NAC {
     namespace NHTTPServer {
-        std::vector<std::shared_ptr<NWebSocketParser::TFrame>> TClient::GetWSData() {
+        std::vector<std::shared_ptr<NWebSocketParser::TFrame>> TClientBase::GetWSData() {
             return WebSocketParser->ExtractData();
         }
 
-        void TClient::OnData(std::shared_ptr<NHTTPLikeParser::TParsedData> request) {
+        void TClientBase::OnData(std::shared_ptr<NHTTPLikeParser::TParsedData> request) {
             try {
                 HandleRequest(request);
 
@@ -18,7 +18,7 @@ namespace NAC {
             }
         }
 
-        void TClient::OnData(std::shared_ptr<NWebSocketParser::TFrame> frame) {
+        void TClientBase::OnData(std::shared_ptr<NWebSocketParser::TFrame> frame) {
             try {
                 if (frame->Opcode == 0xA) {
                     return;
@@ -60,7 +60,7 @@ namespace NAC {
             }
         }
 
-        void TClient::HandleFrame(
+        void TClientBase::HandleFrame(
             std::shared_ptr<NWebSocketParser::TFrame> frame,
             std::shared_ptr<NHTTP::TRequest> //origin
         ) {
@@ -73,7 +73,7 @@ namespace NAC {
             // origin->Send(out);
         }
 
-        void TClient::PushWriteQueue(const NWebSocketParser::TFrame& frame) {
+        void TClientBase::PushWriteQueue(const NWebSocketParser::TFrame& frame) {
             struct TWriteQueueItem : public NNetServer::TNetClient::TWriteQueueItem {
                 TBlob Orig;
             };
@@ -88,11 +88,11 @@ namespace NAC {
             PushWriteQueue(std::move(item_));
         }
 
-        void TClient::PushWriteQueue(const NHTTP::TResponse& response) {
+        void TClientBase::PushWriteQueue(const NHTTP::TResponse& response) {
             PushWriteQueueData((TBlobSequence)response);
         }
 
-        void TClient::Cb(const NMuhEv::TEvSpec& event) {
+        void TClientBase::Cb(const NMuhEv::TEvSpec& event) {
             NHTTPLikeServer::TClient::Cb(event);
 
             if (WebSocketParser) {
@@ -104,7 +104,7 @@ namespace NAC {
             }
         }
 
-        void TClient::OnData(const size_t dataSize, char* data) {
+        void TClientBase::OnData(const size_t dataSize, char* data) {
             if (WebSocketParser) {
                 WebSocketParser->Add(dataSize, data);
 
@@ -186,12 +186,12 @@ namespace NAC {
             return response;
         }
 
-        void TClient::OnWebSocketStart(std::shared_ptr<NHTTP::TRequest> request) {
+        void TClientBase::OnWebSocketStart(std::shared_ptr<NHTTP::TRequest> request) {
             WebSocketOrigin = request;
             WebSocketParser.reset(new NWebSocketParser::TParser);
         }
 
-        int TClient::ReadFromSocket(
+        int TClientBase::ReadFromSocket(
             const int fh,
             void* buf,
             const size_t bufSize
@@ -204,7 +204,7 @@ namespace NAC {
             // }
         }
 
-        int TClient::WriteToSocket(
+        int TClientBase::WriteToSocket(
             const int fh,
             const void* buf,
             const size_t bufSize

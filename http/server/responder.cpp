@@ -2,6 +2,7 @@
 #include "client.hpp"
 #include <ac-library/http/request.hpp>
 #include <stdlib.h>
+#include <ac-library/http/server/await_client.hpp>
 
 #define AC_HTTP_REPONDER_SEND_IMPL(type) \
 void TResponder::Send(type data) const { \
@@ -38,7 +39,7 @@ namespace NAC {
         std::shared_ptr<TResponder::TAwaitHTTPClient> TResponder::AwaitHTTP(
             const char* const host,
             const short port,
-            TAwaitHTTPClient::TCallback&& cb,
+            TAwaitClientCallback<>&& cb,
             const size_t maxRetries
         ) const {
             if (Client_.expired()) {
@@ -46,7 +47,36 @@ namespace NAC {
             }
 
             auto client = Client();
-            return client->Connect<TAwaitHTTPClient>(host, port, maxRetries, std::forward<TAwaitHTTPClient::TCallback>(cb), client->GetNewSharedPtr());
+            return client->Connect<TAwaitHTTPClient>(host, port, maxRetries, std::forward<TAwaitClientCallback<>>(cb), client->GetNewSharedPtr());
+        }
+
+        std::shared_ptr<TResponder::TAwaitHTTPClient> TResponder::AwaitHTTP(
+            const char* const host,
+            const short port,
+            TAwaitClientCallback<>&& cb,
+            TAwaitClientWSCallback<>&& wscb,
+            const size_t maxRetries
+        ) const {
+            if (Client_.expired()) {
+                return std::shared_ptr<TAwaitHTTPClient>();
+            }
+
+            auto client = Client();
+            return client->Connect<TAwaitHTTPClient>(host, port, maxRetries, std::forward<TAwaitClientCallback<>>(cb), std::forward<TAwaitClientWSCallback<>>(wscb), client->GetNewSharedPtr());
+        }
+
+        std::shared_ptr<TResponder::TAwaitHTTPLikeClient> TResponder::AwaitHTTPLike(
+            const char* const host,
+            const short port,
+            TAwaitHTTPLikeClient::TCallback&& cb,
+            const size_t maxRetries
+        ) const {
+            if (Client_.expired()) {
+                return std::shared_ptr<TAwaitHTTPLikeClient>();
+            }
+
+            auto client = Client();
+            return client->Connect<TAwaitHTTPLikeClient>(host, port, maxRetries, std::forward<TAwaitHTTPLikeClient::TCallback>(cb), client->GetNewSharedPtr());
         }
 
         void TResponder::OnWebSocketStart() const {
