@@ -11,7 +11,7 @@
 namespace NAC {
     namespace NHTTP {
         class TRequest;
-    };
+    }
 
     namespace NHTTPServer {
         class TClient;

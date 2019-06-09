@@ -1,7 +1,5 @@
 #include "parser.hpp"
 #include <ac-common/utils/string.hpp>
-#include <algorithm>
-// #include <iostream>
 
 namespace NAC {
     namespace NHTTPLikeParser {
@@ -33,7 +31,7 @@ namespace NAC {
         };
 
         TParsedData::~TParsedData() {
-            if(FirstLine) {
+            if (FirstLine) {
                 free(FirstLine);
                 FirstLine = nullptr;
             }
@@ -57,7 +55,7 @@ namespace NAC {
         }
 
         void TParserState::Flush(TLocalParserState& localState) {
-            if(CurrentRequest.Size() > 0) {
+            if (CurrentRequest.Size() > 0) {
                 char* body = ((OriginalContentLength > 0) ? (CurrentRequest.Data() + (CurrentRequest.Size() - OriginalContentLength)) : nullptr);
 
                 NUtils::TSpinLockGuard guard(ParsedDataLock);
@@ -107,15 +105,15 @@ namespace NAC {
         ) {
             localState.ProcessedLength += lineSize;
 
-            if((state.EffectiveLength == 0) && ((lineSize == 0) || ((lineSize == 1) && (line[0] == '\r')))) {
-                if((lineSize == 1) && (line[0] == '\r') && (localState.ProcessedLength < dataSize)) {
+            if ((state.EffectiveLength == 0) && ((lineSize == 0) || ((lineSize == 1) && (line[0] == '\r')))) {
+                if ((lineSize == 1) && (line[0] == '\r') && (localState.ProcessedLength < dataSize)) {
                     localState.ProcessedLength += 1; // '\n'
                 }
 
                 return;
             }
 
-            if(!state.CurrentRequest && !state.Copy) {
+            if (!state.CurrentRequest && !state.Copy) {
                 state.CurrentRequest.Wrap(dataSize, line, /* own = */false);
             }
 
@@ -126,8 +124,8 @@ namespace NAC {
             //     std::cerr << "parse: " << line_ << std::endl;
             // }
 
-            if(state.InContent) {
-                if(lineSize >= state.ContentLength) {
+            if (state.InContent) {
+                if (lineSize >= state.ContentLength) {
                     // std::cerr << "woot 1" << std::endl;
                     if (state.ContentLength > 0) {
                         state.AppendToCurrentRequest(state.ContentLength, line);
@@ -146,7 +144,7 @@ namespace NAC {
                         lineSize = 0;
                     }
 
-                    if(localState.ProcessedLength < dataSize) {
+                    if (localState.ProcessedLength < dataSize) {
                         // std::cerr << "woot 3" << std::endl;
                         localState.ProcessedLength += 1;
                         state.AppendToCurrentRequest(1, "\n");
@@ -159,7 +157,7 @@ namespace NAC {
                     }
                 }
 
-                if(lineSize == 0) {
+                if (lineSize == 0) {
                     return;
                 }
             }
@@ -171,26 +169,26 @@ namespace NAC {
                 if (lineSize > 0) {
                     state.AppendToCurrentRequest(lineSize, line);
 
-                    if(localState.ProcessedLength < dataSize) {
+                    if (localState.ProcessedLength < dataSize) {
                         localState.ProcessedLength += 1;
                         state.AppendToCurrentRequest(1, "\n");
                         alreadyAddedLinebreak = true;
                     }
                 }
 
-                if(takeLastLine) {
+                if (takeLastLine) {
                     char* newLine = nullptr;
                     size_t newLineSize = 0;
 
                     for (ssize_t i = (state.EffectiveLength - 1); i >= 0; --i) {
-                        if(state.CurrentRequest[i] == '\n') {
+                        if (state.CurrentRequest[i] == '\n') {
                             newLine = state.CurrentRequest.Data() + i + 1;
                             newLineSize = state.EffectiveLength - (i + 1);
                             break;
                         }
                     }
 
-                    if(newLine) {
+                    if (newLine) {
                         line = newLine;
                         lineSize = lineSize;
 
@@ -200,12 +198,12 @@ namespace NAC {
                     }
                 }
 
-                if(!alreadyAddedLinebreak && (localState.ProcessedLength < dataSize)) {
+                if (!alreadyAddedLinebreak && (localState.ProcessedLength < dataSize)) {
                     localState.ProcessedLength += 1;
                     state.AppendToCurrentRequest(1, "\n");
                 }
 
-                if((lineSize == 0) || ((lineSize == 1) && (line[0] == '\r'))) {
+                if ((lineSize == 0) || ((lineSize == 1) && (line[0] == '\r'))) {
                     std::vector<std::pair<size_t, char*>> requestArray;
 
                     {
@@ -213,18 +211,18 @@ namespace NAC {
                         size_t i = 0;
 
                         for(; i < state.EffectiveLength; ++i) {
-                            if(state.CurrentRequest[i] == '\n') {
+                            if (state.CurrentRequest[i] == '\n') {
                                 requestArray.emplace_back(i - prevOffset, state.CurrentRequest.Data() + prevOffset);
                                 prevOffset = i + 1;
                             }
                         }
 
-                        if((i - prevOffset) > 0) {
+                        if ((i - prevOffset) > 0) {
                             requestArray.emplace_back(i - prevOffset, state.CurrentRequest.Data() + prevOffset);
                         }
                     }
 
-                    if(!state.NoFirstLine && (requestArray.size() > 0)) {
+                    if (!state.NoFirstLine && (requestArray.size() > 0)) {
                         NStringUtils::Strip(
                             std::get<0>(requestArray[0]),
                             std::get<1>(requestArray[0]),
@@ -233,7 +231,7 @@ namespace NAC {
                         );
                     }
 
-                    if(requestArray.size() > (state.NoFirstLine ? 0 : 1)) {
+                    if (requestArray.size() > (state.NoFirstLine ? 0 : 1)) {
                         bool isFirst = !state.NoFirstLine;
                         size_t prevOffset;
                         std::string key;
@@ -241,7 +239,7 @@ namespace NAC {
                         bool haveKey = false;
 
                         for (const auto& requestLine : requestArray) {
-                            if(isFirst) {
+                            if (isFirst) {
                                 isFirst = false;
                                 continue;
                             }
@@ -249,21 +247,22 @@ namespace NAC {
                             const size_t size = std::get<0>(requestLine);
                             const char* data = std::get<1>(requestLine);
 
-                            if((size == 0) || ((size == 1) && (data[0] == '\r')))
+                            if ((size == 0) || ((size == 1) && (data[0] == '\r'))) {
                                 continue;
+                            }
 
                             prevOffset = 0;
                             haveKey = false;
 
                             for (size_t i = 0; i < size; ++i) {
-                                if(data[i] == ':') {
+                                if (data[i] == ':') {
                                     NStringUtils::Strip(
                                         i - prevOffset,
                                         data,
                                         key
                                     );
 
-                                    std::transform(key.begin(), key.end(), key.begin(), tolower);
+                                    NStringUtils::ToLower(key);
 
                                     prevOffset = i + 1;
                                     haveKey = true;
@@ -271,8 +270,9 @@ namespace NAC {
                                 }
                             }
 
-                            if(!haveKey)
+                            if (!haveKey) {
                                 continue;
+                            }
 
                             NStringUtils::Strip(
                                 size - prevOffset,
@@ -289,10 +289,10 @@ namespace NAC {
                     {
                         const auto& contentLength = state.CurrentHeaders.find("content-length");
 
-                        if(contentLength != state.CurrentHeaders.end()) {
+                        if (contentLength != state.CurrentHeaders.end()) {
                             state.OriginalContentLength = state.ContentLength = atoi(contentLength->second[0].data());
 
-                        } else if(state.InferContentLength) {
+                        } else if (state.InferContentLength) {
                             state.OriginalContentLength = state.ContentLength = (dataSize - localState.ProcessedLength);
                         }
 
@@ -301,7 +301,7 @@ namespace NAC {
 
                     // std::cerr << "InContent: " << state.InContent << ", " << state.OriginalContentLength << std::endl;
 
-                    if(!state.InContent) {
+                    if (!state.InContent) {
                         state.Flush(localState);
                     }
                 }
@@ -329,7 +329,7 @@ namespace NAC {
                 }
             }
 
-            if((i - prevOffset) > 0) {
+            if ((i - prevOffset) > 0) {
                 ParseLine(
                     localState,
                     state,

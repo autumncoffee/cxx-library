@@ -2,10 +2,9 @@
 
 #include <ac-library/httplike/parser/parser.hpp>
 #include <string>
-#include <string.h>
-#include <algorithm>
 #include <vector>
 #include <ac-library/http/utils/multipart.hpp>
+#include <ac-common/utils/string.hpp>
 
 namespace NAC {
     namespace NHTTP {
@@ -62,10 +61,7 @@ namespace NAC {
 
             template<typename TArg>
             std::string HeaderValueLower(const TArg& name) const {
-                std::string value(HeaderValue(name));
-                std::transform(value.begin(), value.end(), value.begin(), tolower);
-
-                return value;
+                return NStringUtils::ToLower(HeaderValue(name));
             }
 
         private:

@@ -1,4 +1,5 @@
 #include "message.hpp"
+#include <string.h>
 
 namespace NAC {
     namespace NHTTP {

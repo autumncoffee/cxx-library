@@ -10,6 +10,8 @@
 #include <ac-common/str.hpp>
 #include <ac-common/string_sequence.hpp>
 #include <ac-common/tmpmem.hpp>
+#include <vector>
+#include <ac-common/utils/string.hpp>
 
 namespace NAC {
     namespace NHTTP {
@@ -24,6 +26,10 @@ namespace NAC {
             TResponse(const TResponse&) = delete;
             TResponse(TResponse&&) = default;
 
+            void AddPart(TResponse&& part) {
+                Parts.emplace_back(std::move(part));
+            }
+
             TResponse& FirstLine(const std::string& data) {
                 FirstLine_ = data;
                 return *this;
@@ -35,17 +41,17 @@ namespace NAC {
             }
 
             TResponse& Header(const std::string& key, const std::string& value) {
-                Headers_[key].emplace_back(value);
+                Headers_[NStringUtils::ToLower(key)].emplace_back(value);
                 return *this;
             }
 
             TResponse& Header(const std::string& key, std::string&& value) {
-                Headers_[key].emplace_back(std::move(value));
+                Headers_[NStringUtils::ToLower(key)].emplace_back(std::move(value));
                 return *this;
             }
 
             TResponse& Header(std::string&& key, std::string&& value) {
-                Headers_[std::move(key)].emplace_back(std::move(value));
+                Headers_[NStringUtils::ToLower(std::move(key))].emplace_back(std::move(value));
                 return *this;
             }
 
@@ -97,10 +103,16 @@ namespace NAC {
             }
 
         private:
+            TBlobSequence DumpSimple() const;
+            TBlobSequence DumpMultipart() const;
+            TBlob Preamble(const NHTTPLikeParser::THeaders&) const;
+
+        private:
             std::string FirstLine_;
             NHTTPLikeParser::THeaders Headers_;
             std::shared_ptr<TBlob> Body;
             bool AddContentLength_ = true;
+            std::vector<TResponse> Parts;
         };
     }
 }

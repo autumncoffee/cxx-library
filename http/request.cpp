@@ -1,13 +1,10 @@
 #include "request.hpp"
 #include "urlescape.hpp"
-#include <algorithm>
 #include <utility>
 #include <queue>
 #include <ac-common/utils/string.hpp>
 #include <openssl/sha.h>
 #include <openssl/evp.h>
-#include <ctype.h>
-// #include <iostream>
 
 namespace NAC {
     namespace NHTTP {
@@ -32,13 +29,13 @@ namespace NAC {
                 const bool isLast = (i == (data->FirstLineSize - 1));
 
                 if ((data->FirstLine[i] == ' ') || isLast) {
-                    auto&& spec = out.front();
-                    auto* str = std::get<0>(spec);
+                    auto [ str, shouldLowercase ] = out.front();
 
                     str->assign(data->FirstLine + offset, i + (isLast ? 1 : 0) - offset);
 
-                    if(std::get<1>(spec))
-                        std::transform(str->begin(), str->end(), str->begin(), tolower);
+                    if (shouldLowercase) {
+                        NStringUtils::ToLower(*str);
+                    }
 
                     out.pop();
 
@@ -74,7 +71,7 @@ namespace NAC {
                 if(inKey) {
                     if((chr == '=') || (chr == '&') || isLast || (chr == '#')) {
                         key.assign(Path_.data() + offset, i + ((isLast && (chr != '=') && (chr != '&') && (chr != '#')) ? 1 : 0) - offset);
-                        std::transform(key.begin(), key.end(), key.begin(), tolower);
+                        NStringUtils::ToLower(key);
                         URLUnescape(key);
 
                         offset = i + 1;
@@ -135,13 +132,13 @@ namespace NAC {
                         haveKey = true;
 
                     if (cookies[i] == '=') {
-                        NAC::NStringUtils::Strip(
+                        NStringUtils::Strip(
                             i - offset,
                             cookies.data() + offset,
                             key
                         );
 
-                        std::transform(key.begin(), key.end(), key.begin(), tolower);
+                        NStringUtils::ToLower(key);
 
                         offset = i + 1;
                         inKey = false;
@@ -149,7 +146,7 @@ namespace NAC {
                     } else if ((cookies[i] == ';') || isLast) {
                         std::string value;
 
-                        NAC::NStringUtils::Strip(
+                        NStringUtils::Strip(
                             i + ((isLast && (cookies[i] != ';')) ? 1 : 0) - offset,
                             cookies.data() + offset,
                             value

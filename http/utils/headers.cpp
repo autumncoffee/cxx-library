@@ -1,6 +1,4 @@
 #include "headers.hpp"
-#include <algorithm>
-#include <ctype.h>
 #include <ac-common/utils/string.hpp>
 
 namespace NAC {
@@ -28,7 +26,7 @@ namespace NAC {
                         contentTypeDest
                     );
 
-                    std::transform(contentTypeDest.begin(), contentTypeDest.end(), contentTypeDest.begin(), tolower);
+                    NStringUtils::ToLower(contentTypeDest);
 
                     inQueryParams = true;
                     offset = i + 1;
@@ -54,7 +52,7 @@ namespace NAC {
                         key
                     );
 
-                    std::transform(key.begin(), key.end(), key.begin(), tolower);
+                    NStringUtils::ToLower(key);
 
                     offset = i + 1;
                     inKey = false;

@@ -5,7 +5,6 @@
 #include <vector>
 #include <ac-common/spin_lock.hpp>
 #include <memory>
-#include <string.h>
 #include <ac-common/str.hpp>
 
 namespace NAC {
