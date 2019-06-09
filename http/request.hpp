@@ -66,6 +66,30 @@ namespace NAC {
                 return Cookies_;
             }
 
+            bool IsHead() const {
+                return (Method() == "head");
+            }
+
+            bool IsGet() const {
+                return (Method() == "get");
+            }
+
+            bool IsPost() const {
+                return (Method() == "post");
+            }
+
+            bool IsPatch() const {
+                return (Method() == "patch");
+            }
+
+            bool IsDelete() const {
+                return (Method() == "delete");
+            }
+
+            bool IsPut() const {
+                return (Method() == "put");
+            }
+
             TResponse Respond(const std::string& codeAndMsg) const {
                 TResponse out;
                 out.FirstLine(Protocol() + " " + codeAndMsg + "\r\n");
@@ -81,12 +105,47 @@ namespace NAC {
                 return out;
             }
 
+            TResponse RespondFile(
+                size_t size,
+                char* data,
+                const std::string& contentType = "application/octet-stream"
+            );
+
+            TResponse RespondFile(
+                size_t size,
+                const char* data,
+                const std::string& contentType = "application/octet-stream"
+            ) {
+                return RespondFile(size, (char*)data, contentType);
+            }
+
+            TResponse RespondFile(
+                const std::string& path,
+                const std::string& contentType = "application/octet-stream",
+                size_t size = 0,
+                size_t offset = 0
+            );
+
+            TResponse RespondFile(
+                const std::string& path,
+                size_t size,
+                size_t offset,
+                const std::string& contentType = "application/octet-stream"
+            ) {
+                return RespondFile(path, contentType, size, offset);
+            }
+
             void Send(const TResponse& response) {
                 if (ResponseSent.exchange(true)) {
                     throw std::runtime_error("Response sent twice: " + response.FirstLine());
                 }
 
                 Responder.Respond(response);
+            }
+
+            template<typename... TArgs>
+            void SendFile(TArgs&&... args) {
+                Send(RespondFile(std::forward<TArgs>(args)...));
             }
 
             AC_HTTP_REQUEST_SEND(const NWebSocketParser::TFrame&);

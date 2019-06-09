@@ -5,6 +5,7 @@
 #include <ac-common/utils/string.hpp>
 #include <openssl/sha.h>
 #include <openssl/evp.h>
+#include <ac-common/file.hpp>
 
 namespace NAC {
     namespace NHTTP {
@@ -254,6 +255,119 @@ namespace NAC {
             }
 
             return out;
+        }
+
+        TResponse TRequest::RespondFile(
+            const std::string& path,
+            const std::string& contentType,
+            size_t size,
+            size_t offset
+        ) {
+            const bool isHead(IsHead());
+            auto file = std::make_shared<TFile>(path, (isHead ? TFile::ACCESS_INFO : TFile::ACCESS_RDONLY));
+
+            if (!file->IsOK()) {
+                return Respond404();
+            }
+
+            if (size > 0) {
+                if (
+                    (size > file->Size())
+                    || ((offset > 0) && ((offset + size) >= file->Size()))
+                ) {
+                    throw std::runtime_error("Reading past the end of file");
+                }
+            }
+
+            auto response = RespondFile(
+                ((size == 0) ? file->Size() : size),
+                (isHead ? nullptr : (file->Data() + ((size == 0) ? 0 : offset))),
+                contentType
+            );
+
+            if (!isHead) {
+                response.Memorize(file);
+            }
+
+            return response;
+        }
+
+        TResponse TRequest::RespondFile(
+            size_t size,
+            char* data,
+            const std::string& contentType
+        ) {
+            if (IsHead()) {
+                auto response = Respond200();
+                response.DoNotAddContentLength();
+                response.Header("Content-Length", std::to_string(size));
+                response.Header("Accept-Ranges", "bytes");
+                response.Header("Content-Type", contentType);
+
+                return response;
+            }
+
+            auto range = Range();
+
+            if (range.Ranges.empty()) {
+                auto response = Respond200();
+                response.Header("Content-Type", contentType);
+                response.Wrap(size, data);
+
+                return response;
+            }
+
+            const bool onlyOnePart(range.Ranges.size() == 1);
+            auto response = Respond206();
+
+            for (const auto& spec : range.Ranges) {
+                char* start = nullptr;
+                size_t partSize = 0;
+                TMaybe<size_t> end(spec.End);
+                unsigned char sizeMod = 0;
+
+                if (end) {
+                    if (spec.Start) {
+                        ++(*end);
+                        ++sizeMod;
+                    }
+
+                    if (*end > size) {
+                        return Respond416();
+                    }
+                }
+
+                if (spec.Start) {
+                    if (end) {
+                        partSize = *end - *spec.Start;
+
+                    } else {
+                        partSize = size - *spec.Start;
+                    }
+
+                    start = data + *spec.Start;
+
+                } else {
+                    partSize = *end;
+                    start = data + size - partSize;
+                }
+
+                const size_t fromByte(start - data);
+                auto part = (onlyOnePart ? std::move(response) : TResponse());
+
+                part.Header("Content-Type", contentType);
+                part.Header("Content-Range", range.Unit + " " + std::to_string(fromByte) + "-" + std::to_string(fromByte + partSize - sizeMod) + "/" + std::to_string(size));
+                part.Wrap(partSize, start);
+
+                if (onlyOnePart) {
+                    return part;
+                }
+
+                response.AddPart(std::move(part));
+            }
+
+            response.Header("Content-Type", "multipart/byteranges");
+            return response;
         }
     }
 }

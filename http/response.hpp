@@ -27,7 +27,7 @@ namespace NAC {
             TResponse(TResponse&&) = default;
 
             void AddPart(TResponse&& part) {
-                Parts.emplace_back(std::move(part));
+                Parts_.emplace_back(std::move(part));
             }
 
             TResponse& FirstLine(const std::string& data) {
@@ -102,6 +102,14 @@ namespace NAC {
                 AddContentLength_ = false;
             }
 
+            const std::vector<TResponse>& Parts() const {
+                return Parts_;
+            }
+
+            std::vector<TResponse>& Parts() {
+                return Parts_;
+            }
+
         private:
             TBlobSequence DumpSimple() const;
             TBlobSequence DumpMultipart() const;
@@ -112,7 +120,7 @@ namespace NAC {
             NHTTPLikeParser::THeaders Headers_;
             std::shared_ptr<TBlob> Body;
             bool AddContentLength_ = true;
-            std::vector<TResponse> Parts;
+            std::vector<TResponse> Parts_;
         };
     }
 }

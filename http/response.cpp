@@ -26,7 +26,7 @@ namespace NAC {
         }
 
         TResponse::operator TBlobSequence() const {
-            if (Parts.empty()) {
+            if (Parts_.empty()) {
                 return DumpSimple();
 
             } else {
@@ -94,7 +94,7 @@ namespace NAC {
             TBlobSequence body;
             size_t contentLength = end.Size();
 
-            for (const auto& node : Parts) {
+            for (const auto& node : Parts_) {
                 auto part = (TBlobSequence)(node);
 
                 for (const auto& it : part) {
