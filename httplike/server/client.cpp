@@ -48,7 +48,7 @@ namespace NAC {
                 new TWriteQueueItem
             );
             auto&& item = *(TWriteQueueItem*)item_.get();
-            item.Concat(data->Request);
+            item.Concat(data->Request.Size(), data->Request.Data());
             item.Orig = data;
 
             PushWriteQueue(std::move(item_));

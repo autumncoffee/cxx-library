@@ -266,7 +266,7 @@ namespace NAC {
             const bool isHead(IsHead());
             auto file = std::make_shared<TFile>(path, (isHead ? TFile::ACCESS_INFO : TFile::ACCESS_RDONLY));
 
-            if (!file->IsOK()) {
+            if (!*file) {
                 return Respond404();
             }
 

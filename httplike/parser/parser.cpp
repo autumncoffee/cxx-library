@@ -12,7 +12,7 @@ namespace NAC {
             size_t CurrentFirstLineSize = 0;
             char* CurrentFirstLine = nullptr;
             THeaders CurrentHeaders;
-            TBlob CurrentRequest;
+            TMemDisk CurrentRequest;
             bool InContent = false;
             size_t ContentLength = 0;
             size_t OriginalContentLength = 0;
@@ -23,6 +23,15 @@ namespace NAC {
             bool Copy = true;
             bool Stream = true;
             size_t EffectiveLength = 0;
+            size_t MemMax;
+            std::string DiskMask;
+
+            TParserState(size_t memMax, const std::string& diskMask)
+                : CurrentRequest(TMemDisk(memMax, diskMask))
+                , MemMax(memMax)
+                , DiskMask(diskMask)
+            {
+            }
 
             inline void AppendToCurrentRequest(const size_t size, const char* data);
             inline char CurrentRequestLastChar();
@@ -55,8 +64,12 @@ namespace NAC {
         }
 
         void TParserState::Flush(TLocalParserState& localState) {
-            if (CurrentRequest.Size() > 0) {
-                char* body = ((OriginalContentLength > 0) ? (CurrentRequest.Data() + (CurrentRequest.Size() - OriginalContentLength)) : nullptr);
+            CurrentRequest.Finish();
+            TMemDisk currentRequest(MemMax, DiskMask);
+            std::swap(CurrentRequest, currentRequest);
+
+            if (currentRequest.Size() > 0) {
+                char* body = ((OriginalContentLength > 0) ? (currentRequest.Data() + (currentRequest.Size() - OriginalContentLength)) : nullptr);
 
                 NUtils::TSpinLockGuard guard(ParsedDataLock);
 
@@ -66,7 +79,7 @@ namespace NAC {
                     .Headers = std::move(CurrentHeaders),
                     .BodySize = OriginalContentLength,
                     .Body = body,
-                    .Request = std::move(CurrentRequest)
+                    .Request = std::move(currentRequest)
                 });
 
             } else if (CurrentFirstLine) {
@@ -79,7 +92,6 @@ namespace NAC {
             CurrentFirstLineSize = 0;
             CurrentFirstLine = nullptr;
             CurrentHeaders = THeaders();
-            CurrentRequest.Reset();
             InferContentLength = false;
             NoFirstLine = false;
             Copy = true;
@@ -340,8 +352,8 @@ namespace NAC {
             }
         }
 
-        TParser::TParser()
-            : State(new TParserState)
+        TParser::TParser(size_t memMax, const std::string& diskMask)
+            : State(new TParserState(memMax, diskMask))
         {
         }
 

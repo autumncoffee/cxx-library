@@ -5,7 +5,7 @@
 #include <vector>
 #include <ac-common/spin_lock.hpp>
 #include <memory>
-#include <ac-common/str.hpp>
+#include <ac-common/memdisk.hpp>
 
 namespace NAC {
     namespace NHTTPLikeParser {
@@ -17,7 +17,7 @@ namespace NAC {
             THeaders Headers;
             const size_t BodySize = 0;
             char* Body = nullptr;
-            TBlob Request;
+            TMemDisk Request;
 
             template<typename... TArgs>
             TParsedData& Append(TArgs&&... args) {
@@ -38,7 +38,10 @@ namespace NAC {
 
         class TParser {
         public:
-            TParser();
+            TParser(
+                size_t memMax = 10 * 1024 * 1024,
+                const std::string& diskMask = "/tmp/achttplike.XXXXXXXXXX"
+            );
 
             void Add(const size_t dataSize, char* data);
             void Message(const size_t dataSize, char* data, bool copy = false);
