@@ -40,7 +40,26 @@ namespace NAC {
             std::shared_ptr<TResponder::TAwaitHTTPClient> AwaitHTTP(
                 const char* const host,
                 const short port,
+                const bool ssl,
                 TAwaitClientCallback<>&& cb,
+                const size_t maxRetries = 3
+            ) const;
+
+            std::shared_ptr<TResponder::TAwaitHTTPClient> AwaitHTTP(
+                const char* const host,
+                const short port,
+                TAwaitClientCallback<>&& cb,
+                const size_t maxRetries = 3
+            ) const {
+                return AwaitHTTP(host, port, false, std::forward<TAwaitClientCallback<>>(cb), maxRetries);
+            }
+
+            std::shared_ptr<TResponder::TAwaitHTTPClient> AwaitHTTP(
+                const char* const host,
+                const short port,
+                const bool ssl,
+                TAwaitClientCallback<>&& cb,
+                TAwaitClientWSCallback<>&& wscb,
                 const size_t maxRetries = 3
             ) const;
 
@@ -50,6 +69,16 @@ namespace NAC {
                 TAwaitClientCallback<>&& cb,
                 TAwaitClientWSCallback<>&& wscb,
                 const size_t maxRetries = 3
+            ) const {
+                return AwaitHTTP(host, port, false, std::forward<TAwaitClientCallback<>>(cb), std::forward<TAwaitClientWSCallback<>>(wscb), maxRetries);
+            }
+
+            std::shared_ptr<TResponder::TAwaitHTTPLikeClient> AwaitHTTPLike(
+                const char* const host,
+                const short port,
+                const bool ssl,
+                TAwaitHTTPLikeClient::TCallback&& cb,
+                const size_t maxRetries = 3
             ) const;
 
             std::shared_ptr<TResponder::TAwaitHTTPLikeClient> AwaitHTTPLike(
@@ -57,7 +86,9 @@ namespace NAC {
                 const short port,
                 TAwaitHTTPLikeClient::TCallback&& cb,
                 const size_t maxRetries = 3
-            ) const;
+            ) const {
+                return AwaitHTTPLike(host, port, false, std::forward<TAwaitHTTPLikeClient::TCallback>(cb), maxRetries);
+            }
 
             void OnWebSocketStart() const;
             void SetRequestPtr(std::shared_ptr<NHTTP::TRequest>& ptr);

@@ -25,6 +25,9 @@ namespace NAC {
             TClientFactory& ClientFactory;
             TClientArgsFactory& ClientArgsFactory;
 
+            SSL_CTX* SSLCtx = nullptr;
+            bool UseSSL = false;
+
             TClientThreadArgs(TClientFactory&, TClientArgsFactory&);
             ~TClientThreadArgs();
         };

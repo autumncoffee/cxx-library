@@ -10,14 +10,15 @@
 #include <ac-library/net/client/connect.hpp>
 #include <ac-common/string_sequence.hpp>
 #include <utility>
+#include <openssl/ssl.h>
 
 namespace NAC {
     namespace NNetServer {
         class TBaseClient {
         public:
             struct TArgs {
-                int Fh;
-                int WakeupFd;
+                int Fh = -1;
+                int WakeupFd = -1;
                 std::shared_ptr<sockaddr_in> Addr;
                 TAddClient AddClient;
 
@@ -66,6 +67,7 @@ namespace NAC {
             std::shared_ptr<T> Connect(
                 const char* const host,
                 const short port,
+                const bool ssl,
                 const size_t maxRetries,
                 TArgs&&... forwardClientArgs
             ) const {
@@ -86,11 +88,16 @@ namespace NAC {
                 clientArgs->Addr = addr;
                 clientArgs->AddClient = Args->AddClient;
 
+                FixUpConnectClientArgs(clientArgs.get(), ssl);
+
                 std::shared_ptr<T> out(new T(clientArgs.release()));
                 Args->AddClient(out);
 
                 return out;
             }
+
+        protected:
+            virtual void FixUpConnectClientArgs(TArgs*, bool ssl) const = 0;
 
         protected:
             std::shared_ptr<TArgs> Args;
@@ -101,7 +108,11 @@ namespace NAC {
 
         class TNetClient : public TBaseClient {
         public:
-            using TArgs = TBaseClient::TArgs;
+            struct TArgs : public TBaseClient::TArgs {
+                SSL_CTX* SSLCtx = nullptr;
+                bool SSLIsClient = false;
+                bool UseSSL = false;
+            };
 
             struct TWriteQueueItem {
                 virtual ~TWriteQueueItem() {
@@ -191,10 +202,24 @@ namespace NAC {
 
             void UnshiftDummyWriteQueueItem();
 
+            void FixUpConnectClientArgs(TBaseClient::TArgs* clientArgs_, bool ssl) const override {
+                const auto& args = *(TNetClient::TArgs*)Args.get();
+                auto&& clientArgs = *(TNetClient::TArgs*)clientArgs_;
+
+                clientArgs.SSLIsClient = true;
+
+                if (ssl && args.SSLCtx) {
+                    clientArgs.SSLCtx = args.SSLCtx;
+                    clientArgs.UseSSL = true;
+                }
+            }
+
         private:
             std::atomic<bool> Destroyed;
             std::deque<std::shared_ptr<TWriteQueueItem>> WriteQueue;
             NUtils::TSpinLock WriteQueueLock;
+
+            SSL* SSL_ = nullptr;
         };
     }
 }

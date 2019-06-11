@@ -180,6 +180,11 @@ namespace NAC {
                 clientArgs->WakeupFd = WakeupFds[1];
                 clientArgs->Addr = newClient->Addr;
 
+                if (auto* netClientArgs = dynamic_cast<NNetServer::TNetClient::TArgs*>(clientArgs.get())) {
+                    netClientArgs->SSLCtx = Args->SSLCtx;
+                    netClientArgs->UseSSL = Args->UseSSL;
+                }
+
                 auto&& addClient = clientArgs->AddClient = [this](std::shared_ptr<NNetServer::TBaseClient> client) {
                     client->SetWeakPtr(client);
                     client->OnWire();

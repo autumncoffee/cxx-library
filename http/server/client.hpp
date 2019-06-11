@@ -27,18 +27,6 @@ namespace NAC {
             void OnData(std::shared_ptr<NHTTPLikeParser::TParsedData> request) override;
             void OnData(const size_t dataSize, char* data) override;
 
-            int ReadFromSocket(
-                const int fh,
-                void* buf,
-                const size_t bufSize
-            ) override;
-
-            int WriteToSocket(
-                const int fh,
-                const void* buf,
-                const size_t bufSize
-            ) override;
-
             virtual void HandleRequest(std::shared_ptr<NHTTPLikeParser::TParsedData> data) = 0;
 
             virtual void HandleFrame(
@@ -49,7 +37,6 @@ namespace NAC {
         private:
             std::unique_ptr<NWebSocketParser::TParser> WebSocketParser;
             std::shared_ptr<NHTTP::TRequest> WebSocketOrigin;
-            bool SSL = false;
         };
 
         class TClient : public TClientBase {

@@ -22,13 +22,17 @@ namespace NAC {
                 TClientFactory ClientFactory;
                 TClientArgsFactory ClientArgsFactory;
 
+                SSL_CTX* SSLCtx = nullptr;
+                bool UseSSL = false;
+                bool InitSSL = true;
+
                 template<typename T>
                 static inline TClientFactory MakeClientFactory() {
                     static_assert(std::is_base_of<TBaseClient, T>::value);
                     static_assert(std::is_base_of<TBaseClient::TArgs, typename T::TArgs>::value);
 
                     return [](TBaseClient::TArgs* const args) -> TBaseClient* {
-                        return new T(args);
+                        return new T((typename T::TArgs*)args);
                     };
                 }
 
@@ -37,12 +41,7 @@ namespace NAC {
             };
 
         public:
-            TServer(const TArgs& args)
-                : NAC::NBase::TWorkerLite()
-                , Args(args)
-            {
-            }
-
+            TServer(const TArgs& args);
             TServer(const TServer&) = delete;
             TServer(TServer&&) = delete;
 

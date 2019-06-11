@@ -43,6 +43,35 @@ namespace NAC {
     }
 
     namespace NNetServer {
+        TServer::TServer(const TArgs& args)
+            : NAC::NBase::TWorkerLite()
+            , Args(args)
+        {
+            if (!Args.SSLCtx) {
+                if (Args.InitSSL) {
+                    SSL_library_init();
+                    OpenSSL_add_all_algorithms();
+                }
+
+                Args.SSLCtx = SSL_CTX_new(TLS_method());
+
+                if (!Args.SSLCtx) {
+                    std::cerr << "SSL_CTX_new() failed" << std::endl;
+                    abort();
+                }
+
+                if (SSL_CTX_set_cipher_list(Args.SSLCtx, "ALL") != 1) {
+                    std::cerr << "SSL_CTX_set_cipher_list() failed" << std::endl;
+                    abort();
+                }
+
+                if (SSL_CTX_set_default_verify_paths(Args.SSLCtx) != 1) {
+                    std::cerr << "SSL_CTX_set_default_verify_paths() failed" << std::endl;
+                    abort();
+                }
+            }
+        }
+
         void TServer::Run() {
             std::vector<std::pair<int, std::shared_ptr<sockaddr_storage>>> binds;
             binds.reserve(2);
@@ -106,6 +135,9 @@ namespace NAC {
                     Args.ClientFactory,
                     Args.ClientArgsFactory
                 ));
+
+                args->SSLCtx = Args.SSLCtx;
+                args->UseSSL = Args.UseSSL;
 
                 std::shared_ptr<TClientThread> thread;
                 thread.reset(new TClientThread(args));

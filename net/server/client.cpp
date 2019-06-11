@@ -36,39 +36,65 @@ namespace NAC {
             NSocketUtils::SetupSocket(Args->Fh, 1000); // TODO: check return value
             fcntl(Args->Fh, F_SETFL, fcntl(Args->Fh, F_GETFL, 0) | O_NONBLOCK);
 
+            if (args->UseSSL && args->SSLCtx) {
+                SSL_ = SSL_new(args->SSLCtx);
+
+                if (!SSL_) {
+                    std::cerr << "SSL_new() failed" << std::endl;
+                    abort();
+                }
+
+                if (SSL_set_fd(SSL_, Args->Fh) != 1) {
+                    std::cerr << "SSL_set_fd() failed" << std::endl;
+                    abort();
+                }
+
+                if (args->SSLIsClient) {
+                    if (SSL_set_cipher_list(SSL_, "ALL") != 1) {
+                        std::cerr << "SSL_set_cipher_list() failed" << std::endl;
+                        abort();
+                    }
+
+                    SSL_set_connect_state(SSL_);
+
+                } else {
+                    SSL_set_accept_state(SSL_);
+                }
+            }
+
             Destroyed = false;
         }
 
         void TNetClient::Cb(const NMuhEv::TEvSpec& event) {
             assert(event.Ident == Args->Fh);
 
-            if(event.Flags & NMuhEv::MUHEV_FLAG_ERROR) {
+            if (event.Flags & NMuhEv::MUHEV_FLAG_ERROR) {
                 std::cerr << "EV_ERROR" << std::endl;
                 Drop();
                 return;
             }
 
-            if(event.Flags & NMuhEv::MUHEV_FLAG_EOF) {
+            if (event.Flags & NMuhEv::MUHEV_FLAG_EOF) {
                 // NUtils::cluck(1, "EV_EOF");
                 Drop();
                 return;
             }
 
-            if(event.Filter & NMuhEv::MUHEV_FILTER_READ) {
-                while(true) {
+            if (event.Filter & NMuhEv::MUHEV_FILTER_READ) {
+                while (true) {
                     static const size_t bufSize = 8192;
                     char buf[bufSize];
                     int read = ReadFromSocket(event.Ident, buf, bufSize);
 
-                    if(read > 0) {
+                    if (read > 0) {
                         OnData(read, buf);
 
-                    } else if(read < 0) {
-                        if((errno != EAGAIN) && (errno != EINTR)) {
+                    } else if (read < 0) {
+                        if ((errno != EAGAIN) && (errno != EINTR)) {
                             Drop();
                             return;
 
-                        } else if(errno == EAGAIN) {
+                        } else if (errno == EAGAIN) {
                             break;
                         }
 
@@ -79,8 +105,8 @@ namespace NAC {
                 }
             }
 
-            if(event.Filter & NMuhEv::MUHEV_FILTER_WRITE) {
-                while(true) {
+            if (event.Filter & NMuhEv::MUHEV_FILTER_WRITE) {
+                while (true) {
                     auto item = GetWriteItem();
 
                     if (!item) {
@@ -92,12 +118,12 @@ namespace NAC {
                     if (written < 0) {
                         auto e = errno;
 
-                        if((e != EAGAIN) && (e != EINTR)) {
+                        if ((e != EAGAIN) && (e != EINTR)) {
                             perror("write");
                             Drop(); // TODO?
                         }
 
-                        if(e != EINTR) {
+                        if (e != EINTR) {
                             break;
                         }
 
@@ -113,7 +139,31 @@ namespace NAC {
             void* buf,
             const size_t bufSize
         ) {
-            return ::recvfrom(fh, buf, bufSize, MSG_DONTWAIT, NULL, 0);
+            if (SSL_) {
+                int rv = SSL_read(SSL_, buf, bufSize);
+
+                if (rv < 0) {
+                    auto err = SSL_get_error(SSL_, rv);
+
+                    switch (err) {
+                        case SSL_ERROR_WANT_WRITE:
+                            UnshiftDummyWriteQueueItem();
+
+                        case SSL_ERROR_WANT_READ:
+                            errno = EAGAIN;
+                            break;
+
+                        default:
+                            errno = ECONNRESET;
+                            break;
+                    }
+                }
+
+                return rv;
+
+            } else {
+                return ::recvfrom(fh, buf, bufSize, MSG_DONTWAIT, NULL, 0);
+            }
         }
 
         int TNetClient::WriteToSocket(
@@ -121,7 +171,41 @@ namespace NAC {
             const void* buf,
             const size_t bufSize
         ) {
-            return ::write(fh, buf, bufSize);
+            if (SSL_) {
+                int rv;
+
+                if (fh == -1) {
+                    rv = SSL_do_handshake(SSL_);
+
+                } else {
+                    rv = SSL_write(SSL_, buf, bufSize);
+                }
+
+                if (rv < 0) {
+                    auto err = SSL_get_error(SSL_, rv);
+
+                    switch (err) {
+                        case SSL_ERROR_WANT_WRITE: {
+                            if (fh == -1) {
+                                UnshiftDummyWriteQueueItem();
+                            }
+                        }
+
+                        case SSL_ERROR_WANT_READ:
+                            errno = EAGAIN;
+                            break;
+
+                        default:
+                            errno = ECONNRESET;
+                            break;
+                    }
+                }
+
+                return rv;
+
+            } else {
+                return ::write(fh, buf, bufSize);
+            }
         }
 
         void TNetClient::PushWriteQueue(std::shared_ptr<TWriteQueueItem> data) {

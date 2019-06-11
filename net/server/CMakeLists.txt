@@ -11,4 +11,6 @@ target_link_libraries(
     ac_library_net_client
     ac_common
     ac_common_utils
+    "-lssl"
+    "-lcrypto"
 )
