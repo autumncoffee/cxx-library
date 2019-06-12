@@ -287,7 +287,7 @@ namespace NAC {
                     break;
 
                 } else {
-                    if (next != item.DataLast) {
+                    if ((len == written) && (next != item.DataLast)) {
                         item.DataLast = next;
                         item.DataPos = 0;
                     }
