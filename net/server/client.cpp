@@ -146,8 +146,18 @@ namespace NAC {
                     auto err = SSL_get_error(SSL_, rv);
 
                     switch (err) {
-                        case SSL_ERROR_WANT_WRITE:
-                            UnshiftDummyWriteQueueItem();
+                        case SSL_ERROR_WANT_WRITE: {
+                            bool push(true);
+
+                            {
+                                NUtils::TSpinLockGuard guard(WriteQueueLock);
+                                push = (WriteQueue.empty() || !WriteQueue.front()->Dummy);
+                            }
+
+                            if (push) {
+                                UnshiftDummyWriteQueueItem();
+                            }
+                        }
 
                         case SSL_ERROR_WANT_READ:
                             errno = EAGAIN;
