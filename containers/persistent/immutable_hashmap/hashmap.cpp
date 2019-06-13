@@ -72,6 +72,10 @@ namespace NAC {
         // file.MSync();
         // std::cerr << "Created: " << file.Size() << std::endl;
 
+        if (!*this) {
+            return;
+        }
+
         bucketCount = htonll(bucketCount);
         memcpy(file.Data(), &bucketCount, sizeof(bucketCount));
     }
@@ -92,6 +96,10 @@ namespace NAC {
         uint64_t tmp;
         memcpy(&tmp, File().Data(), sizeof(tmp));
         BucketCount = htonll(tmp);
+    }
+
+    TPersistentImmutableHashMap::~TPersistentImmutableHashMap() {
+        File().~TFile();
     }
 
     uint64_t TPersistentImmutableHashMap::Bucket(const TBlob& key) const {
@@ -132,9 +140,9 @@ namespace NAC {
         DataPos += size;
     }
 
-    void TPersistentImmutableHashMap::Close() {
+    bool TPersistentImmutableHashMap::Close() {
         if (!*this) {
-            return;
+            return false;
         }
 
         // File().MSync();
@@ -142,9 +150,11 @@ namespace NAC {
         if (rename(File().Path().c_str(), Path.c_str()) == 0) {
             File().~TFile();
             new (File_) TFile(Path, TFile::ACCESS_RDONLY);
+            return true;
 
         } else {
             perror("rename");
+            return false;
         }
     }
 

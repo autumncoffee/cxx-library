@@ -34,8 +34,10 @@ namespace NAC {
             uint32_t seed
         );
 
+        ~TPersistentImmutableHashMap();
+
         void Add(const TBlob& key, const TBlob& value);
-        void Close();
+        bool Close();
 
         TBlob Get(const TBlob& key) const;
 
