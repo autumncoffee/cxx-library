@@ -16,19 +16,32 @@ namespace NAC {
             static TValue Restore(char*);
         };
 
+        static const uint32_t DefaultSeed = 42;
+
     public:
         TPersistentImmutableHashMap() = delete;
 
+        // Write mode
         TPersistentImmutableHashMap(
             const std::string& path,
             uint64_t bucketCount,
-            uint32_t seed = 42
+            uint32_t seed
+        );
+
+        // Read mode
+        TPersistentImmutableHashMap(
+            const std::string& path,
+            uint32_t seed
         );
 
         void Add(const TBlob& key, const TBlob& value);
         void Close();
 
         TBlob Get(const TBlob& key) const;
+
+        explicit operator bool() const {
+            return (bool)File();
+        }
 
     private:
         TFile& File() {

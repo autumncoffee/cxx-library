@@ -58,6 +58,11 @@ namespace NAC {
         , Path(path)
     {
         new (File_) TFile(Path + ".new", TFile::ACCESS_CREATE);
+
+        if (!*this) {
+            return;
+        }
+
         auto& file = File();
 
         file.Resize(sizeof(uint64_t) * (1 + BucketCount));
@@ -69,6 +74,24 @@ namespace NAC {
 
         bucketCount = htonll(bucketCount);
         memcpy(file.Data(), &bucketCount, sizeof(bucketCount));
+    }
+
+    TPersistentImmutableHashMap::TPersistentImmutableHashMap(
+        const std::string& path,
+        uint32_t seed
+    )
+        : Seed(seed)
+        , Path(path)
+    {
+        new (File_) TFile(Path, TFile::ACCESS_RDONLY);
+
+        if (!*this) {
+            return;
+        }
+
+        uint64_t tmp;
+        memcpy(&tmp, File().Data(), sizeof(tmp));
+        BucketCount = htonll(tmp);
     }
 
     uint64_t TPersistentImmutableHashMap::Bucket(const TBlob& key) const {
@@ -83,6 +106,10 @@ namespace NAC {
     }
 
     void TPersistentImmutableHashMap::Add(const TBlob& key, const TBlob& value) {
+        if (!*this) {
+            return;
+        }
+
         auto* ptr = KeyPtr(key);
         size_t size = 0;
 
@@ -106,6 +133,10 @@ namespace NAC {
     }
 
     void TPersistentImmutableHashMap::Close() {
+        if (!*this) {
+            return;
+        }
+
         // File().MSync();
 
         if (rename(File().Path().c_str(), Path.c_str()) == 0) {
@@ -118,6 +149,10 @@ namespace NAC {
     }
 
     TBlob TPersistentImmutableHashMap::Get(const TBlob& key) const {
+        if (!*this) {
+            return TBlob();
+        }
+
         const auto* ptr = KeyPtr(key);
         const size_t headerSize((sizeof(uint64_t) * (1 + BucketCount)));
 
