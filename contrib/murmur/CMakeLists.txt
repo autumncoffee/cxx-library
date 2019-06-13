@@ -1,0 +1,3 @@
+file(GLOB AC_LIBRARY_CONTRIB_MURMUR_SOURCES *.cpp)
+
+add_library(ac_library_contrib_murmur STATIC ${AC_LIBRARY_CONTRIB_MURMUR_SOURCES})
