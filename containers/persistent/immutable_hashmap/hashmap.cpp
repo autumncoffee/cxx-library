@@ -185,7 +185,7 @@ namespace NAC {
         if (rename(File().Path().c_str(), Path.c_str()) == 0) {
             File().~TFile();
             new (File_) TFile(Path, TFile::ACCESS_RDONLY);
-            return *this;
+            return (bool)*this;
 
         } else {
             perror("rename");
