@@ -3,6 +3,7 @@
 #include <ac-common/file.hpp>
 #include <ac-common/str.hpp>
 #include <string.h>
+#include <utility>
 
 namespace NAC {
     class TPersistentImmutableHashMap {
@@ -81,6 +82,11 @@ namespace NAC {
 
         TBlob Get(size_t key) const {
             return Get((uint64_t)key);
+        }
+
+        template<typename T>
+        TBlob operator[](T&& key) const {
+            return Get(std::forward<T>(key));
         }
 
         explicit operator bool() const {
