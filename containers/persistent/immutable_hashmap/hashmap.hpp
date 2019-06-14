@@ -2,6 +2,7 @@
 
 #include <ac-common/file.hpp>
 #include <ac-common/str.hpp>
+#include <string.h>
 
 namespace NAC {
     class TPersistentImmutableHashMap {
@@ -37,9 +38,50 @@ namespace NAC {
         ~TPersistentImmutableHashMap();
 
         void Add(const TBlob& key, const TBlob& value);
+
+        void Add(const char* key, const TBlob& value) {
+            Add(TBlob(strlen(key), key), value);
+        }
+
+        void Add(const std::string& key, const TBlob& value) {
+            Add(TBlob(key.size(), key.data()), value);
+        }
+
+        void Add(uint64_t key, const TBlob& value);
+        void Add(uint32_t key, const TBlob& value);
+        void Add(uint16_t key, const TBlob& value);
+
+        void Add(uint8_t key, const TBlob& value) {
+            Add(TBlob(sizeof(key), (char*)&key), value);
+        }
+
+        void Add(size_t key, const TBlob& value) {
+            Add((uint64_t)key, value);
+        }
+
         bool Close();
 
         TBlob Get(const TBlob& key) const;
+
+        TBlob Get(const char* key) const {
+            return Get(TBlob(strlen(key), key));
+        }
+
+        TBlob Get(const std::string& key) const {
+            return Get(TBlob(key.size(), key.data()));
+        }
+
+        TBlob Get(uint64_t key) const;
+        TBlob Get(uint32_t key) const;
+        TBlob Get(uint16_t key) const;
+
+        TBlob Get(uint8_t key) const {
+            return Get(TBlob(sizeof(key), (char*)&key));
+        }
+
+        TBlob Get(size_t key) const {
+            return Get((uint64_t)key);
+        }
 
         explicit operator bool() const {
             return (bool)File();

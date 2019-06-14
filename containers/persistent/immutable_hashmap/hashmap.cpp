@@ -3,8 +3,43 @@
 #include <ac-library/contrib/murmur/MurmurHash3.h>
 #include <absl/numeric/int128.h>
 #include <stdio.h>
-#include <string.h>
+#include <arpa/inet.h>
 // #include <iostream>
+
+#define ADD_INT_KEY(type) void TPersistentImmutableHashMap::Add(type key, const TBlob& value) { \
+    auto tmp = DumpInt(key); \
+    Add(TBlob(sizeof(tmp), (char*)&tmp), value); \
+}
+
+#define GET_INT_KEY(type) TBlob TPersistentImmutableHashMap::Get(type key) const { \
+    auto tmp = DumpInt(key); \
+    return Get(TBlob(sizeof(tmp), (char*)&tmp)); \
+}
+
+namespace {
+    template<typename T>
+    static T DumpInt(T val) {
+        static_assert(
+            (sizeof(T) == sizeof(uint64_t))
+            || (sizeof(T) == sizeof(uint32_t))
+            || (sizeof(T) == sizeof(uint16_t))
+        );
+
+        T out;
+
+        if constexpr (sizeof(T) == sizeof(uint64_t)) {
+            out = htons(val);
+
+        } else if constexpr (sizeof(T) == sizeof(uint32_t)) {
+            out = htonl(val);
+
+        } else if constexpr (sizeof(T) == sizeof(uint16_t)) {
+            out = htonll(val);
+        }
+
+        return out;
+    }
+}
 
 namespace NAC {
     size_t TPersistentImmutableHashMap::TValue::Dump(TFile& out) const {
@@ -190,4 +225,12 @@ namespace NAC {
             }
         }
     }
+
+    ADD_INT_KEY(uint64_t);
+    ADD_INT_KEY(uint32_t);
+    ADD_INT_KEY(uint16_t);
+
+    GET_INT_KEY(uint64_t);
+    GET_INT_KEY(uint32_t);
+    GET_INT_KEY(uint16_t);
 }
