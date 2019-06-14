@@ -206,6 +206,13 @@ namespace NAC {
         // std::cerr << ntohll(tmp) << std::endl;
         tmp = headerSize + ntohll(tmp);
 
+        if (tmp > headerSize) {
+            --tmp;
+
+        } else {
+            return TBlob();
+        }
+
         // std::cerr << tmp << ", " << File().Size() << std::endl;
 
         while (true) {
@@ -213,12 +220,12 @@ namespace NAC {
 
             if (
                 (rv.Key.Size() == key.Size())
-                && (strncmp(rv.Key.Data(), key.Data(), key.Size()) == 0)
+                && (memcmp(rv.Key.Data(), key.Data(), key.Size()) == 0)
             ) {
                 return TBlob(rv.Value.Size(), rv.Value.Data());
 
             } else if (rv.Prev > 0) {
-                tmp = headerSize + rv.Prev;
+                tmp = headerSize + rv.Prev - 1;
 
             } else {
                 return TBlob();

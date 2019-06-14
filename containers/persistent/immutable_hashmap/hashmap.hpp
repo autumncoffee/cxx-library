@@ -111,6 +111,6 @@ namespace NAC {
         uint32_t Seed;
         std::string Path;
         char File_[sizeof(TFile)];
-        size_t DataPos = 0;
+        size_t DataPos = 1;
     };
 }
