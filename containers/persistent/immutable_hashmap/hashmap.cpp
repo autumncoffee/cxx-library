@@ -3,55 +3,29 @@
 #include <ac-library/contrib/murmur/MurmurHash3.h>
 #include <absl/numeric/int128.h>
 #include <stdio.h>
-#include <arpa/inet.h>
 // #include <iostream>
 
 #define ADD_INT_KEY(type) void TPersistentImmutableHashMap::Add(type key, const TBlob& value) { \
-    auto tmp = DumpInt(key); \
+    auto tmp = hton(key); \
     Add(TBlob(sizeof(tmp), (char*)&tmp), value); \
 }
 
 #define GET_INT_KEY(type) TBlob TPersistentImmutableHashMap::Get(type key) const { \
-    auto tmp = DumpInt(key); \
+    auto tmp = hton(key); \
     return Get(TBlob(sizeof(tmp), (char*)&tmp)); \
-}
-
-namespace {
-    template<typename T>
-    static T DumpInt(T val) {
-        static_assert(
-            (sizeof(T) == sizeof(uint64_t))
-            || (sizeof(T) == sizeof(uint32_t))
-            || (sizeof(T) == sizeof(uint16_t))
-        );
-
-        T out;
-
-        if constexpr (sizeof(T) == sizeof(uint64_t)) {
-            out = htons(val);
-
-        } else if constexpr (sizeof(T) == sizeof(uint32_t)) {
-            out = htonl(val);
-
-        } else if constexpr (sizeof(T) == sizeof(uint16_t)) {
-            out = htonll(val);
-        }
-
-        return out;
-    }
 }
 
 namespace NAC {
     size_t TPersistentImmutableHashMap::TValue::Dump(TFile& out) const {
-        uint64_t tmp(htonll(Key.Size()));
+        uint64_t tmp(hton(Key.Size()));
         out.Append(sizeof(tmp), (char*)&tmp);
         out.Append(Key.Size(), Key.Data());
 
-        tmp = htonll(Value.Size());
+        tmp = hton(Value.Size());
         out.Append(sizeof(tmp), (char*)&tmp);
         out.Append(Value.Size(), Value.Data());
 
-        tmp = htonll(Prev);
+        tmp = hton(Prev);
         out.Append(sizeof(tmp), (char*)&tmp);
 
         return (sizeof(uint64_t) * 3) + Key.Size() + Value.Size();
@@ -64,21 +38,21 @@ namespace NAC {
 
         memcpy(&tmp, ptr + offset, sizeof(tmp));
         offset += sizeof(tmp);
-        tmp = ntohll(tmp);
+        tmp = ntoh(tmp);
 
         out.Key.Wrap(tmp, ptr + offset);
         offset += tmp;
 
         memcpy(&tmp, ptr + offset, sizeof(tmp));
         offset += sizeof(tmp);
-        tmp = ntohll(tmp);
+        tmp = ntoh(tmp);
 
         out.Value.Wrap(tmp, ptr + offset);
         offset += tmp;
 
         memcpy(&tmp, ptr + offset, sizeof(tmp));
         offset += sizeof(tmp);
-        out.Prev = ntohll(tmp);
+        out.Prev = ntoh(tmp);
 
         return out;
     }
@@ -101,8 +75,6 @@ namespace NAC {
         auto& file = File();
 
         file.Resize(sizeof(uint64_t) * (1 + BucketCount));
-        file.Stat();
-        file.Map();
         file.SeekToEnd();
         // file.MSync();
         // std::cerr << "Created: " << file.Size() << std::endl;
@@ -111,7 +83,7 @@ namespace NAC {
             return;
         }
 
-        bucketCount = htonll(bucketCount);
+        bucketCount = hton(bucketCount);
         memcpy(file.Data(), &bucketCount, sizeof(bucketCount));
     }
 
@@ -130,7 +102,7 @@ namespace NAC {
 
         uint64_t tmp;
         memcpy(&tmp, File().Data(), sizeof(tmp));
-        BucketCount = htonll(tmp);
+        BucketCount = ntoh(tmp);
     }
 
     TPersistentImmutableHashMap::~TPersistentImmutableHashMap() {
@@ -159,7 +131,7 @@ namespace NAC {
         {
             TValue tmp;
             memcpy(&tmp.Prev, ptr, sizeof(tmp));
-            tmp.Prev = ntohll(tmp.Prev);
+            tmp.Prev = ntoh(tmp.Prev);
             tmp.Key.Wrap(key.Size(), key.Data());
             tmp.Value.Wrap(value.Size(), value.Data());
 
@@ -167,7 +139,7 @@ namespace NAC {
         }
 
         {
-            uint64_t tmp(htonll(DataPos));
+            uint64_t tmp(hton(DataPos));
             memcpy(ptr, &tmp, sizeof(tmp));
         }
 
@@ -203,8 +175,8 @@ namespace NAC {
 
         uint64_t tmp;
         memcpy(&tmp, ptr, sizeof(tmp));
-        // std::cerr << ntohll(tmp) << std::endl;
-        tmp = headerSize + ntohll(tmp);
+        // std::cerr << ntoh(tmp) << std::endl;
+        tmp = headerSize + ntoh(tmp);
 
         if (tmp > headerSize) {
             --tmp;

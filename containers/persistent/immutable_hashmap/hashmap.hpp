@@ -2,7 +2,6 @@
 
 #include <ac-common/file.hpp>
 #include <ac-common/str.hpp>
-#include <string.h>
 #include <utility>
 
 namespace NAC {
