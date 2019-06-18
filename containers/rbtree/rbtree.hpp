@@ -6,6 +6,28 @@
 namespace NAC {
     class TRBTreeBase {
     public:
+        class TIterator {
+        public:
+            TIterator() = default;
+            TIterator(const char* ptr, size_t offset, const TBlob& prefix = TBlob());
+
+            bool Next(TBlob& key, TBlob& value);
+
+            explicit operator bool() const {
+                return (bool)Ptr;
+            }
+
+        private:
+            size_t Descend(size_t offset, size_t def) const;
+
+        private:
+            const char* Ptr = nullptr;
+            size_t RootOffset = 0;
+            size_t CurrentOffset = 0;
+            TBlob Prefix;
+        };
+
+    public:
         virtual ~TRBTreeBase() {
         }
 
@@ -79,6 +101,17 @@ namespace NAC {
         template<typename T>
         TBlob operator[](T&& key) const {
             return Get(std::forward<T>(key));
+        }
+
+        TIterator GetAll() const;
+        TIterator GetAll(const TBlob& prefix) const;
+
+        TIterator GetAll(const char* prefix) const {
+            return GetAll(TBlob(strlen(prefix), prefix));
+        }
+
+        TIterator GetAll(const std::string& prefix) const {
+            return GetAll(TBlob(prefix.size(), prefix.data()));
         }
 
     private:

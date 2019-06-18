@@ -1,9 +1,7 @@
 #include "rbtree.hpp"
 #include <ac-common/utils/htonll.hpp>
-#include <algorithm>
-#include <arpa/inet.h>
-#include <iostream>
-#include <unordered_set>
+// #include <iostream>
+// #include <unordered_set>
 
 #define TRACE(x) //std::cerr << x << std::endl;
 #define EXT_TRACE(x) TRACE(x)
@@ -579,5 +577,201 @@ namespace NAC {
 
     void TRBTreeBase::FindRoot() {
         Root(Data(), RootOffset);
+    }
+
+    TRBTreeBase::TIterator::TIterator(const char* ptr, size_t offset, const TBlob& prefix)
+        : Ptr(ptr)
+        , RootOffset(offset)
+        , Prefix(prefix.Size(), prefix.Data())
+    {
+        CurrentOffset = Descend(RootOffset, RootOffset);
+        TRACE("TIterator done");
+    }
+
+    bool TRBTreeBase::TIterator::Next(TBlob& key, TBlob& value) {
+        if (!Ptr) {
+            return false;
+        }
+
+        TRBTreeNode node(Ptr + CurrentOffset);
+        key = node.Key();
+
+        if (node.ValueOffset() > 0) {
+            uint64_t tmp;
+            memcpy(&tmp, Ptr + node.ValueOffset() - 1, sizeof(tmp));
+
+            value.Wrap(ntoh(tmp), Ptr + node.ValueOffset() - 1 + sizeof(tmp));
+
+        } else {
+            value.Reset();
+        }
+
+        if ((RootOffset == CurrentOffset) || (node.Parent() == 0)) {
+            Ptr = nullptr;
+            return true;
+        }
+
+        size_t rootOffset(node.Parent() - 1);
+        TRBTreeNode root(Ptr + rootOffset);
+
+        while (RootOffset != CurrentOffset) {
+            if (((CurrentOffset + 1) == root.Left()) && (root.Right() > 0)) {
+                CurrentOffset = Descend(root.Right() - 1, rootOffset);
+
+            } else {
+                CurrentOffset = rootOffset;
+            }
+
+            if (!Prefix || (CurrentOffset != rootOffset)) {
+                break;
+            }
+
+            TRACE("next: StartsWith(" << (std::string)root.Key() << ", " << (std::string)Prefix << ")");
+
+            if (root.Key().StartsWith(Prefix)) {
+                break;
+
+            } else if (root.Parent() == 0) {
+                Ptr = nullptr;
+                break;
+
+            } else {
+                rootOffset = root.Parent() - 1;
+                root.Load(Ptr + rootOffset);
+            }
+        }
+
+        return true;
+    }
+
+    size_t TRBTreeBase::TIterator::Descend(size_t offset, size_t rv) const {
+        size_t tmp(offset);
+        TRBTreeNode root(Ptr + tmp);
+
+        if (Prefix) {
+            size_t lastOkRight(0);
+            bool isLeft(false);
+
+            while (true) {
+                const int cmp(root.Key().PrefixCmp(Prefix));
+
+                TRACE("descend: cmp(" << (std::string)root.Key() << ", " << (std::string)Prefix << ") == " << cmp << ", offset=" << tmp);
+
+                if (cmp < 0) {
+                    if (root.Right() > 0) {
+                        tmp = root.Right() - 1;
+
+                    } else if (isLeft && (lastOkRight > 0)) {
+                        tmp = lastOkRight - 1;
+                        isLeft = false;
+
+                    } else {
+                        break;
+                    }
+
+                } else if (cmp > 0) {
+                    if (root.Left() > 0) {
+                        tmp = root.Left() - 1;
+
+                    } else if (isLeft && (lastOkRight > 0)) {
+                        tmp = lastOkRight - 1;
+                        isLeft = false;
+
+                    } else {
+                        break;
+                    }
+
+                } else {
+                    rv = tmp;
+
+                    if (root.Left() > 0) {
+                        tmp = root.Left() - 1;
+                        isLeft = true;
+                        lastOkRight = root.Right();
+
+                    } else if (root.Right() > 0) {
+                        tmp = root.Right() - 1;
+                        isLeft = false;
+
+                    } else {
+                        break;
+                    }
+                }
+
+                root.Load(Ptr + tmp);
+            }
+
+        } else {
+            while (true) {
+                rv = tmp;
+
+                if (root.Left() > 0) {
+                    tmp = root.Left() - 1;
+
+                } else if (root.Right() > 0) {
+                    tmp = root.Right() - 1;
+
+                } else {
+                    break;
+                }
+
+                root.Load(Ptr + tmp);
+            }
+        }
+
+        TRACE("descend returns " << rv);
+
+        return rv;
+    }
+
+    TRBTreeBase::TIterator TRBTreeBase::GetAll() const {
+        if (Size() == 0) {
+            return TIterator();
+        }
+
+        return TIterator(Data(), RootOffset);
+    }
+
+    TRBTreeBase::TIterator TRBTreeBase::GetAll(const TBlob& prefix) const {
+        if (Size() == 0) {
+            return TIterator();
+        }
+
+        const auto* const ptr = Data();
+        size_t currentOffset(RootOffset);
+        TRBTreeNode root(ptr + currentOffset);
+
+        while (true) {
+            const int rv = root.Key().PrefixCmp(prefix);
+
+            if (rv < 0) {
+                if (root.Right() > 0) {
+                    currentOffset = root.Right() - 1;
+                    root.Load(ptr + currentOffset);
+                    TRACE("going right...");
+                    continue;
+
+                } else {
+                    TRACE("greater, but have nothing");
+                    return TIterator();
+                }
+
+            } else if (rv > 0) {
+                if (root.Left() > 0) {
+                    currentOffset = root.Left() - 1;
+                    root.Load(ptr + currentOffset);
+                    TRACE("going left...");
+                    continue;
+
+                } else {
+                    TRACE("less, but have nothing");
+                    return TIterator();
+                }
+
+            } else {
+                TRACE("found");
+                return TIterator(ptr, currentOffset, TBlob(prefix.Size(), prefix.Data()));
+            }
+        }
     }
 }
