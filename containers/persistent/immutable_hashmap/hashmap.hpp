@@ -7,17 +7,30 @@
 namespace NAC {
     class TPersistentImmutableHashMap {
     public:
-        struct TValue {
-            TBlob Key;
-            TBlob Value;
-            uint64_t Prev = 0;
-
-            size_t Dump(TFile&) const;
-
-            static TValue Restore(char*);
-        };
-
         static const uint32_t DefaultSeed = 42;
+
+        class TIterator {
+        public:
+            TIterator() = default;
+            TIterator(char* ptr, uint64_t bucketCount);
+
+            bool Next(TBlob& key, TBlob& value);
+
+            explicit operator bool() const {
+                return (bool)Ptr;
+            }
+
+        private:
+            const char* BucketPtr(uint64_t bucket) const {
+                return Ptr + (sizeof(uint64_t) * (1 + bucket));
+            }
+
+        private:
+            char* Ptr = nullptr;
+            uint64_t BucketCount = 0;
+            uint64_t CurrentBucket = 0;
+            uint64_t Offset = 0;
+        };
 
     public:
         TPersistentImmutableHashMap() = delete;
@@ -37,26 +50,26 @@ namespace NAC {
 
         ~TPersistentImmutableHashMap();
 
-        void Add(const TBlob& key, const TBlob& value);
+        void Insert(const TBlob& key, const TBlob& value);
 
-        void Add(const char* key, const TBlob& value) {
-            Add(TBlob(strlen(key), key), value);
+        void Insert(const char* key, const TBlob& value) {
+            Insert(TBlob(strlen(key), key), value);
         }
 
-        void Add(const std::string& key, const TBlob& value) {
-            Add(TBlob(key.size(), key.data()), value);
+        void Insert(const std::string& key, const TBlob& value) {
+            Insert(TBlob(key.size(), key.data()), value);
         }
 
-        void Add(uint64_t key, const TBlob& value);
-        void Add(uint32_t key, const TBlob& value);
-        void Add(uint16_t key, const TBlob& value);
+        void Insert(uint64_t key, const TBlob& value);
+        void Insert(uint32_t key, const TBlob& value);
+        void Insert(uint16_t key, const TBlob& value);
 
-        void Add(uint8_t key, const TBlob& value) {
-            Add(TBlob(sizeof(key), (char*)&key), value);
+        void Insert(uint8_t key, const TBlob& value) {
+            Insert(TBlob(sizeof(key), (char*)&key), value);
         }
 
-        void Add(size_t key, const TBlob& value) {
-            Add((uint64_t)key, value);
+        void Insert(size_t key, const TBlob& value) {
+            Insert((uint64_t)key, value);
         }
 
         bool Close();
@@ -91,6 +104,8 @@ namespace NAC {
         explicit operator bool() const {
             return (bool)File();
         }
+
+        TIterator GetAll() const;
 
     private:
         TFile& File() {
