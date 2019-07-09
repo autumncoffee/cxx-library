@@ -324,12 +324,10 @@ namespace NAC {
                 char* start = nullptr;
                 size_t partSize = 0;
                 TMaybe<size_t> end(spec.End);
-                unsigned char sizeMod = 0;
 
                 if (end) {
                     if (spec.Start) {
                         ++(*end);
-                        ++sizeMod;
                     }
 
                     if (*end > size) {
@@ -356,7 +354,7 @@ namespace NAC {
                 auto part = (onlyOnePart ? std::move(response) : TResponse());
 
                 part.Header("Content-Type", contentType);
-                part.Header("Content-Range", range.Unit + " " + std::to_string(fromByte) + "-" + std::to_string(fromByte + partSize - sizeMod) + "/" + std::to_string(size));
+                part.Header("Content-Range", range.Unit + " " + std::to_string(fromByte) + "-" + std::to_string(fromByte + partSize - 1) + "/" + std::to_string(size));
                 part.Wrap(partSize, start);
 
                 if (onlyOnePart) {
