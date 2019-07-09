@@ -324,7 +324,7 @@ namespace NAC {
                 char* start = nullptr;
                 size_t partSize = 0;
                 TMaybe<size_t> end(spec.End);
-                unsigned char sizeMod = 0;
+                unsigned char sizeMod = 1;
 
                 if (end) {
                     if (spec.Start) {
