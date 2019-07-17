@@ -10,9 +10,15 @@ namespace NAC {
 
         void TClientBase::OnData(std::shared_ptr<NHTTPLikeParser::TParsedData> request) {
             try {
-                HandleRequest(request);
+                try {
+                    HandleRequest(request);
 
-            } catch(...) {
+                } catch (const std::exception& e) {
+                    std::cerr << "[disaster]: " << e.what() << std::endl;
+                    Drop();
+                }
+
+            } catch (...) {
                 std::cerr << "[disaster]" << std::endl;
                 Drop();
             }
