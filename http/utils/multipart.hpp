@@ -5,6 +5,7 @@
 #include <ac-library/httplike/parser/parser.hpp>
 #include <memory>
 #include <utility>
+#include <ac-library/http/abstract_message.hpp>
 
 namespace NAC {
     namespace NHTTP {
@@ -23,19 +24,19 @@ namespace NAC {
     }
 
     namespace NHTTP {
-        class TBodyPart {
+        class TBodyPart : public TAbstractMessage {
         public:
             explicit TBodyPart(std::shared_ptr<NHTTPLikeParser::TParsedData> data);
 
-            const THeaders& Headers() const {
+            const THeaders& Headers() const override {
                 return Data->Headers;
             }
 
-            size_t ContentLength() const {
+            size_t ContentLength() const override {
                 return Data->BodySize;
             }
 
-            const char* Content() const {
+            const char* Content() const override {
                 return Data->Body;
             }
 
