@@ -110,9 +110,8 @@ namespace NAC {
             return;
         }
 
-        uint64_t tmp;
-        memcpy(&tmp, File().Data(), sizeof(tmp));
-        BucketCount = ntoh(tmp);
+        memcpy(&BucketCount, File().Data(), sizeof(BucketCount));
+        BucketCount = ntoh(BucketCount);
     }
 
     TPersistentImmutableHashMap::~TPersistentImmutableHashMap() {
