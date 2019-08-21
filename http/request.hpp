@@ -62,6 +62,26 @@ namespace NAC {
                 return QueryParams_;
             }
 
+            template<typename TArg>
+            const std::vector<std::string>* QueryParams(const TArg& name) const {
+                const auto& params = QueryParams();
+                const auto& values = params.find(name);
+
+                if ((values == params.end()) || values->second.empty()) {
+                    return nullptr;
+                }
+
+                return &values->second;
+            }
+
+            template<typename TArg>
+            const std::string& QueryParam(const TArg& name) const {
+                static const std::string empty;
+                const auto* values = QueryParams(name);
+
+                return (values ? values->front() : empty);
+            }
+
             const TCookies& Cookies() const {
                 return Cookies_;
             }
