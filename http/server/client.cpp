@@ -112,6 +112,14 @@ namespace NAC {
 
         void TClientBase::OnData(const size_t dataSize, char* data) {
             if (WebSocketParser) {
+                // std::cerr << "OnData(" << std::to_string(dataSize) << "): ";
+                //
+                // for (size_t i = 0; i < dataSize; ++i) {
+                //     static const char CharTable[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
+                //     std::cerr << CharTable[((unsigned char)(data[i])) >> 4] << CharTable[((unsigned char)(data[i])) & 0xf] << ' ';
+                // }
+                //
+                // std::cerr << std::endl;
                 WebSocketParser->Add(dataSize, data);
 
             } else {

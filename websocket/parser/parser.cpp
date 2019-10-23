@@ -3,7 +3,7 @@
 #include <ac-common/spin_lock.hpp>
 #include <cmath>
 #include <assert.h>
-// #include <iostream>
+#include <iostream>
 
 #ifndef htonll
 #define htonll(x) ((1 == htonl(1)) ? (x) : ((uint64_t)htonl(\
@@ -148,6 +148,7 @@ namespace NAC {
 
                         CurrentFrame.reset(new TFrame);
                         auto& frame = *CurrentFrame;
+                        // std::cerr << "[ws] create frame" << std::endl;
 
                         {
                             const unsigned char firstByte(data[0]);
@@ -157,6 +158,8 @@ namespace NAC {
                             frame.RSV2 = firstByte & 32;
                             frame.RSV3 = firstByte & 16;
                             frame.Opcode = firstByte & (8 + 4 + 2 + 1);
+
+                            // std::cerr << "[ws] opcode: " << std::to_string(frame.Opcode) << std::endl;
                         }
 
                         {
@@ -182,14 +185,19 @@ namespace NAC {
                                 default:
                                     PayloadLen = secondByte;
                             }
+
+                            // std::cerr << "[ws] SizeLen: " << std::to_string(SizeLen) << std::endl;
+                            // std::cerr << "[ws] PayloadLen: " << std::to_string(PayloadLen) << std::endl;
                         }
 
                     } else if (Buf.Size() == 0) {
                         Buf.Append(msg.Size(), msg.Data());
+                        // std::cerr << "[ws] bufferize [1]" << std::endl;
                     }
                 }
 
                 if (!CurrentFrame) {
+                    // std::cerr << "[ws] no current frame" << std::endl;
                     return;
                 }
 
@@ -202,13 +210,18 @@ namespace NAC {
                     }
                 }
 
+                // std::cerr << "[ws] stage: " << std::to_string(Stage) << std::endl;
+
                 if (Stage == STAGE_PAYLOAD_SIZE) {
                     const size_t leftoverSize(msg.Size() - msgOffset);
 
                     if (leftoverSize < SizeLen) {
                         if ((Buf.Size() == 0) && (leftoverSize > 0)) {
                             Buf.Append(leftoverSize, msg.Data() + msgOffset);
+                            // std::cerr << "[ws] bufferize [2]" << std::endl;
                         }
+
+                        // std::cerr << "[ws] waiting for more [1]" << std::endl;
 
                         return;
                     }
@@ -248,6 +261,7 @@ namespace NAC {
                         if (leftoverSize < sizeof(CurrentFrame->Mask)) {
                             if ((Buf.Size() == 0) && (leftoverSize > 0)) {
                                 Buf.Append(leftoverSize, msg.Data() + msgOffset);
+                                // std::cerr << "[ws] bufferize [3]" << std::endl;
                             }
 
                             return;
@@ -270,6 +284,7 @@ namespace NAC {
                     Flush();
 
                 } else if ((msg.Size() - msgOffset) >= PayloadLen) {
+                    // std::cerr << "[ws] payload len: " << std::to_string(PayloadLen) << std::endl;
                     CurrentFrame->Payload.Reserve(PayloadLen);
                     CurrentFrame->Payload.Append(PayloadLen, msg.Data() + msgOffset);
                     msgOffset += PayloadLen;
@@ -293,18 +308,28 @@ namespace NAC {
 
                 if ((msg.Size() > msgOffset) && (Buf.Size() == 0)) {
                     Buf.Append(msg.Size() - msgOffset, msg.Data() + msgOffset);
+                    // std::cerr << "[ws] bufferize [4]" << std::endl;
                 }
             }
 
         public:
             inline void ParseData(const size_t dataSize, char* data) {
+                bool first(true);
+
                 while (true) {
                     const size_t frameCount(Frames.size());
                     TBlob msg;
 
                     if (Buf.Size() > 0) {
-                        Buf.Append(dataSize, data);
+                        if (first) {
+                            Buf.Append(dataSize, data);
+                        }
+
                         msg.Wrap(Buf.Size() - Offset, Buf.Data() + Offset, /* own = */false);
+
+                    } else if (!first) {
+                        std::cerr << "[websocket] weird loop" << std::endl;
+                        break;
 
                     } else {
                         msg.Wrap(dataSize, data, /* own = */false);
@@ -315,14 +340,18 @@ namespace NAC {
                     if ((frameCount == Frames.size()) || ((Buf.Size() - Offset) == 0)) {
                         break;
                     }
+
+                    first = false;
                 }
 
                 if ((Buf.Size() > 0) && (Buf.Size() == Offset)) {
+                    // std::cerr << "[ws] shrink" << std::endl;
                     Buf.Shrink(0);
                     Offset = 0;
                 }
 
                 if (Offset > (10 * 1024 * 1024)) {
+                    // std::cerr << "[ws] chop" << std::endl;
                     Buf.Chop(Offset);
                     Offset = 0;
                 }
@@ -347,6 +376,7 @@ namespace NAC {
                 }
 
                 CurrentFrame.reset();
+                SizeLen = 0;
                 PayloadLen = 0;
                 Stage = STAGE_START;
             }
