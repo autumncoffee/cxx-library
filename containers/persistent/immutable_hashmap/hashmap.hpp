@@ -3,7 +3,6 @@
 #include <ac-common/file.hpp>
 #include <ac-common/str.hpp>
 #include <utility>
-#include <type_traits>
 
 namespace NAC {
     class TPersistentImmutableHashMap {
@@ -85,11 +84,6 @@ namespace NAC {
             Insert(TBlob(sizeof(key), (char*)&key), value);
         }
 
-        template<typename std::enable_if_t<std::negation<std::is_same<size_t, uint64_t>>::value>* = nullptr>
-        void Insert(size_t key, const TBlob& value) {
-            Insert((uint64_t)key, value);
-        }
-
         bool Close();
 
         TBlob Get(const TBlob& key) const;
@@ -108,11 +102,6 @@ namespace NAC {
 
         TBlob Get(uint8_t key) const {
             return Get(TBlob(sizeof(key), (char*)&key));
-        }
-
-        template<typename std::enable_if_t<std::negation<std::is_same<size_t, uint64_t>>::value>* = nullptr>
-        TBlob Get(size_t key) const {
-            return Get((uint64_t)key);
         }
 
         template<typename T>
