@@ -16,6 +16,22 @@ namespace NAC {
 
             bool Next(TBlob& key, TBlob& value);
 
+            bool Next(uint64_t& key, TBlob& value);
+            bool Next(uint32_t& key, TBlob& value);
+            bool Next(uint16_t& key, TBlob& value);
+
+            bool Next(uint8_t& key, TBlob& value) {
+                TBlob tmp;
+
+                if (Next(tmp, value)) {
+                    memcpy(&key, tmp.Data(), sizeof(key));
+
+                    return true;
+                }
+
+                return false;
+            }
+
             explicit operator bool() const {
                 return (bool)Ptr;
             }

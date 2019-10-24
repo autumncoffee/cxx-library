@@ -15,6 +15,19 @@
     return Get(TBlob(sizeof(tmp), (char*)&tmp)); \
 }
 
+#define NEXT_INT_KEY(type) bool TPersistentImmutableHashMap::TIterator::Next(type& key, TBlob& value) { \
+    TBlob tmp; \
+\
+    if (Next(tmp, value)) { \
+        memcpy(&key, tmp.Data(), sizeof(key)); \
+        key = ntoh(key); \
+\
+        return true; \
+    } \
+\
+    return false; \
+}
+
 namespace {
     using namespace NAC;
 
@@ -218,6 +231,10 @@ namespace NAC {
     GET_INT_KEY(uint64_t);
     GET_INT_KEY(uint32_t);
     GET_INT_KEY(uint16_t);
+
+    NEXT_INT_KEY(uint64_t);
+    NEXT_INT_KEY(uint32_t);
+    NEXT_INT_KEY(uint16_t);
 
     TPersistentImmutableHashMap::TIterator::TIterator(char* ptr, uint64_t bucketCount)
         : Ptr(ptr)
