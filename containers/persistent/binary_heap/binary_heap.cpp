@@ -57,7 +57,7 @@ namespace NAC {
         size_t right = size;
 
         while (right >= left) {
-            const size_t pivot = (right - ((right - left) / 2));
+            const size_t pivot = (right - ((double)(right - left) / 2.0));
 
             if (pivot >= size) {
                 return TIterator();
