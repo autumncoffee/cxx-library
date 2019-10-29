@@ -31,6 +31,8 @@ namespace NAC {
         TPersistentBinaryHeap(const std::string& path);
         TPersistentBinaryHeap(const std::string& path, uint64_t recordSize);
 
+        ~TPersistentBinaryHeap();
+
         void Insert(const void* item);
 
         void Insert(const TBlob& item) {

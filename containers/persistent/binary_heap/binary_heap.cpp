@@ -28,6 +28,10 @@ namespace NAC {
         File().Append(sizeof(recordSize), (char*)&recordSize);
     }
 
+    TPersistentBinaryHeap::~TPersistentBinaryHeap() {
+        File().~TFile();
+    }
+
     void TPersistentBinaryHeap::Insert(const void* item) {
         File().Append(RecordSize_, (const char*)item);
     }
