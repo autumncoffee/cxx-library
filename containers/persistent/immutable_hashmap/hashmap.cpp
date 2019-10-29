@@ -143,7 +143,7 @@ namespace NAC {
     }
 
     void TPersistentImmutableHashMap::Insert(const TBlob& key, const TBlob& value) {
-        if (!*this) {
+        if (!*this || (BucketCount == 0)) {
             return;
         }
 
@@ -188,7 +188,7 @@ namespace NAC {
     }
 
     TBlob TPersistentImmutableHashMap::Get(const TBlob& key) const {
-        if (!*this) {
+        if (!*this || (BucketCount == 0)) {
             return TBlob();
         }
 
@@ -290,7 +290,7 @@ namespace NAC {
     }
 
     TPersistentImmutableHashMap::TIterator TPersistentImmutableHashMap::GetAll() const {
-        if (!*this) {
+        if (!*this || (BucketCount == 0)) {
             return TIterator();
         }
 
