@@ -6,6 +6,7 @@
 #include <netinet/in.h>
 #include <queue>
 #include "client.hpp"
+#include <ac-common/muhev.hpp>
 
 namespace NAC {
     namespace NNetServer {
@@ -39,7 +40,7 @@ namespace NAC {
             void Run() override;
 
         private:
-            void Accept();
+            void Accept(NMuhEv::TLoop& loop);
 
         private:
             std::shared_ptr<TClientThreadArgs> Args;

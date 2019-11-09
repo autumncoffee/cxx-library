@@ -17,9 +17,8 @@ namespace NAC {
         class TBaseClient {
         public:
             struct TArgs {
-                int Fh = -1;
+                NMuhEv::TLoop* Loop = nullptr;
                 int WakeupFd = -1;
-                std::shared_ptr<sockaddr_in> Addr;
                 TAddClient AddClient;
 
                 virtual ~TArgs() {
@@ -34,6 +33,10 @@ namespace NAC {
             TBaseClient(TBaseClient&&) = delete;
 
             virtual ~TBaseClient() {
+            }
+
+            NMuhEv::TLoop& Loop() {
+                return *Args->Loop;
             }
 
             virtual void Cb(const NMuhEv::TEvSpec& event) = 0;
@@ -59,10 +62,6 @@ namespace NAC {
                 return std::shared_ptr<T>(ptr, (T*)ptr.get());
             }
 
-            int GetFh() const {
-                return Args->Fh;
-            }
-
             template<typename T, typename... TArgs>
             std::shared_ptr<T> Connect(
                 const char* const host,
@@ -83,6 +82,7 @@ namespace NAC {
                 }
 
                 std::unique_ptr<typename T::TArgs> clientArgs(new typename T::TArgs(std::forward<TArgs>(forwardClientArgs)...));
+                clientArgs->Loop = Args->Loop;
                 clientArgs->Fh = fh;
                 clientArgs->WakeupFd = Args->WakeupFd;
                 clientArgs->Addr = addr;
@@ -101,6 +101,7 @@ namespace NAC {
 
         protected:
             std::shared_ptr<TArgs> Args;
+            NMuhEv::TEvSpec EvSpec;
 
         private:
             std::weak_ptr<TBaseClient> SelfWeakPtr;
@@ -109,6 +110,8 @@ namespace NAC {
         class TNetClient : public TBaseClient {
         public:
             struct TArgs : public TBaseClient::TArgs {
+                int Fh = -1;
+                std::shared_ptr<sockaddr_in> Addr;
                 SSL_CTX* SSLCtx = nullptr;
                 bool SSLIsClient = false;
                 bool UseSSL = false;
@@ -160,7 +163,7 @@ namespace NAC {
             virtual std::shared_ptr<TWriteQueueItem> GetWriteItem() {
                 NUtils::TSpinLockGuard guard(WriteQueueLock);
 
-                if(WriteQueue.empty()) {
+                if (WriteQueue.empty()) {
                     return nullptr;
                 }
 
@@ -213,6 +216,9 @@ namespace NAC {
                     clientArgs.UseSSL = true;
                 }
             }
+
+        private:
+            void UpdateEvent();
 
         private:
             std::atomic<bool> Destroyed;

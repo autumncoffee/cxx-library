@@ -3,7 +3,6 @@
 #include "client.hpp"
 #include "add_client.hpp"
 
-#include <ac-common/muhev.hpp>
 #include <iostream>
 #include <fcntl.h>
 #include <sys/types.h>
@@ -27,7 +26,7 @@ namespace NAC {
         }
 
         TClientThreadArgs::~TClientThreadArgs() {
-            for(int i = 0; i < 2; ++i) {
+            for (int i = 0; i < 2; ++i) {
                 close(Fds[i]);
             }
         }
@@ -38,7 +37,7 @@ namespace NAC {
         {
             AcceptContext = WakeupContext = '\0';
 
-            if(socketpair(PF_LOCAL, SOCK_STREAM, 0, WakeupFds) == -1) {
+            if (socketpair(PF_LOCAL, SOCK_STREAM, 0, WakeupFds) == -1) {
                 perror("socketpair");
                 abort();
             }
@@ -47,25 +46,18 @@ namespace NAC {
         void TClientThread::Run() {
             NMuhEv::TLoop loop;
 
-            while(true) {
-                auto list = NMuhEv::MakeEvList(ActiveClients.size() + 2);
+            while (true) {
+                std::vector<NMuhEv::TEvSpec> list;
+                list.reserve(ActiveClients.size() + 2);
+
                 decltype(ActiveClients) newActiveClients;
 
-                for(auto client : ActiveClients) {
-                    if(!client->IsAlive()) {
+                for (auto client : ActiveClients) {
+                    if (!client->IsAlive()) {
                         continue;
                     }
 
                     newActiveClients.emplace_back(client);
-
-                    loop.AddEvent(NMuhEv::TEvSpec {
-                        .Ident = (uintptr_t)client->GetFh(),
-                        .Filter = (NMuhEv::MUHEV_FILTER_READ | (
-                            client->ShouldWrite() ? NMuhEv::MUHEV_FILTER_WRITE : 0
-                        )),
-                        .Flags = NMuhEv::MUHEV_FLAG_NONE,
-                        .Ctx = client.get()
-                    }, list);
                 }
 
                 ActiveClients.swap(newActiveClients);
@@ -75,75 +67,59 @@ namespace NAC {
                     .Filter = NMuhEv::MUHEV_FILTER_READ,
                     .Flags = NMuhEv::MUHEV_FLAG_NONE,
                     .Ctx = &AcceptContext
-                }, list);
+                });
 
                 loop.AddEvent(NMuhEv::TEvSpec {
                     .Ident = (uintptr_t)WakeupFds[0],
                     .Filter = NMuhEv::MUHEV_FILTER_READ,
                     .Flags = NMuhEv::MUHEV_FLAG_NONE,
                     .Ctx = &WakeupContext
-                }, list);
+                });
 
-                int triggeredCount = loop.Wait(list);
+                bool ok = loop.Wait(list);
                 // NUtils::cluck(3, "Got %d events in thread %llu", triggeredCount, NUtils::ThreadId());
-                if(triggeredCount < 0) {
+
+                if (!ok) {
                     perror("kevent");
                     abort();
 
-                } else if(triggeredCount > 0) {
-                    for(int i = 0; i < triggeredCount; ++i) {
-                        const auto& event = NMuhEv::GetEvent(list, i);
+                } else if (list.size() > 0) {
+                    for (const auto& event : list) {
+                        if ((event.Ctx == &AcceptContext) || (event.Ctx == &WakeupContext)) {
+                            {
+                                char dummy[128];
+                                int rv = recvfrom(
+                                    event.Ident,
+                                    dummy,
+                                    128,
+                                    MSG_DONTWAIT,
+                                    NULL,
+                                    0
+                                );
 
-                        if((event.Ctx == &AcceptContext) || (event.Ctx == &WakeupContext)) {
-                            // if(event.Ident == ((Args*)args)->fds[0]) {
-                                if(event.Flags & NMuhEv::MUHEV_FLAG_EOF) {
-                                    // NUtils::cluck(1, "EV_EOF");
+                                if (rv < 0) {
+                                    perror("recvfrom");
+                                    abort();
                                 }
+                            }
 
-                                if(event.Flags & NMuhEv::MUHEV_FLAG_ERROR) {
-                                    // NUtils::cluck(1, "EV_ERROR");
+                            if (event.Ctx == &AcceptContext) {
+                                try {
+                                    Accept(loop);
+
+                                } catch(const std::exception& e) {
+                                    std::cerr << "Failed to accept client: " << e.what() << std::endl;
                                 }
-
-                                {
-                                    char dummy[128];
-                                    int rv = recvfrom(
-                                        event.Ident,
-                                        dummy,
-                                        128,
-                                        MSG_DONTWAIT,
-                                        NULL,
-                                        0
-                                    );
-
-                                    if(rv < 0) {
-                                        perror("recvfrom");
-                                        abort();
-                                    }
-                                }
-
-                                // NUtils::cluck(1, "accept()");
-                                if(event.Ctx == &AcceptContext) {
-                                    try {
-                                        Accept();
-
-                                    } catch(const std::exception& e) {
-                                        std::cerr << "Failed to accept client: " << e.what() << std::endl;
-                                    }
-                                }
-
-                            // } else {
-                            //     NUtils::cluck(1, "wut");
-                            // }
+                            }
 
                         } else {
                             auto client = (NNetServer::TBaseClient*)event.Ctx;
 
-                            if(client->IsAlive()) {
-                                // NUtils::cluck(1, "client_cb()");
+                            if (client->IsAlive()) {
                                 try {
                                     client->Cb(event);
 
-                                } catch(const std::exception& e) {
+                                } catch (const std::exception& e) {
                                     std::cerr << "Failed to execute client callback: " << e.what() << std::endl;
                                     client->Drop();
                                 }
@@ -154,16 +130,17 @@ namespace NAC {
                             }
                         }
                     }
+
                 } else {
                     // NUtils::cluck(1, "nothing is here");
                 }
             }
         }
 
-        void TClientThread::Accept() {
+        void TClientThread::Accept(NMuhEv::TLoop& loop) {
             NUtils::TSpinLockGuard guard(Args->Mutex);
 
-            while(!Args->Queue.empty()) {
+            while (!Args->Queue.empty()) {
                 auto newClient = Args->Queue.front();
                 Args->Queue.pop();
 
@@ -176,11 +153,12 @@ namespace NAC {
                     abort();
                 }
 
-                clientArgs->Fh = newClient->Fh;
+                clientArgs->Loop = &loop;
                 clientArgs->WakeupFd = WakeupFds[1];
-                clientArgs->Addr = newClient->Addr;
 
                 if (auto* netClientArgs = dynamic_cast<NNetServer::TNetClient::TArgs*>(clientArgs.get())) {
+                    netClientArgs->Fh = newClient->Fh;
+                    netClientArgs->Addr = newClient->Addr;
                     netClientArgs->SSLCtx = Args->SSLCtx;
                     netClientArgs->UseSSL = Args->UseSSL;
                 }

@@ -33,8 +33,15 @@ namespace NAC {
         TNetClient::TNetClient(TArgs* const args)
             : TBaseClient(args)
         {
-            NSocketUtils::SetupSocket(Args->Fh, 1000); // TODO: check return value
-            fcntl(Args->Fh, F_SETFL, fcntl(Args->Fh, F_GETFL, 0) | O_NONBLOCK);
+            NSocketUtils::SetupSocket(args->Fh, 1000); // TODO: check return value
+            fcntl(args->Fh, F_SETFL, fcntl(args->Fh, F_GETFL, 0) | O_NONBLOCK);
+
+            EvSpec.Ident = args->Fh;
+            EvSpec.Filter = NMuhEv::MUHEV_FILTER_READ;
+            EvSpec.Flags = NMuhEv::MUHEV_FLAG_NONE;
+            EvSpec.Ctx = this;
+
+            Loop().AddEvent(EvSpec, /* mod = */false);
 
             if (args->UseSSL && args->SSLCtx) {
                 SSL_ = SSL_new(args->SSLCtx);
@@ -44,7 +51,7 @@ namespace NAC {
                     abort();
                 }
 
-                if (SSL_set_fd(SSL_, Args->Fh) != 1) {
+                if (SSL_set_fd(SSL_, args->Fh) != 1) {
                     std::cerr << "SSL_set_fd() failed" << std::endl;
                     abort();
                 }
@@ -66,7 +73,7 @@ namespace NAC {
         }
 
         void TNetClient::Cb(const NMuhEv::TEvSpec& event) {
-            assert(event.Ident == Args->Fh);
+            assert(event.Ident == ((TNetClient::TArgs*)Args.get())->Fh);
 
             if (event.Flags & NMuhEv::MUHEV_FLAG_ERROR) {
                 std::cerr << "EV_ERROR" << std::endl;
@@ -110,6 +117,7 @@ namespace NAC {
                     auto item = GetWriteItem();
 
                     if (!item) {
+                        UpdateEvent();
                         break;
                     }
 
@@ -229,6 +237,7 @@ namespace NAC {
                 WriteQueue.emplace_back(data);
             }
 
+            UpdateEvent();
             WakeLoop();
         }
 
@@ -242,6 +251,7 @@ namespace NAC {
                 WriteQueue.emplace_front(data);
             }
 
+            UpdateEvent();
             WakeLoop();
         }
 
@@ -250,11 +260,14 @@ namespace NAC {
 
             WakeLoop();
 
-            if(_destroyed)
+            if (_destroyed) {
                 return;
+            }
 
-            shutdown(Args->Fh, SHUT_RDWR);
-            close(Args->Fh);
+            Loop().RemoveEvent(EvSpec.Ident);
+
+            shutdown(((TNetClient::TArgs*)Args.get())->Fh, SHUT_RDWR);
+            close(((TNetClient::TArgs*)Args.get())->Fh);
         }
 
         void TNetClient::TWriteQueueItem::CalcSize() {
@@ -298,6 +311,17 @@ namespace NAC {
             }
 
             return written;
+        }
+
+        void TNetClient::UpdateEvent() {
+            auto filter = (NMuhEv::MUHEV_FILTER_READ | (
+                ShouldWrite() ? NMuhEv::MUHEV_FILTER_WRITE : 0
+            ));
+
+            if (filter != EvSpec.Filter) {
+                EvSpec.Filter = filter;
+                Loop().AddEvent(EvSpec);
+            }
         }
     }
 }

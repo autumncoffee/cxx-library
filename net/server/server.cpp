@@ -147,31 +147,29 @@ namespace NAC {
                 thread->Start();
             }
 
-            std::cerr << "ready!" << std::endl;
-
             NMuhEv::TLoop loop;
 
+            for (const auto& node : binds) {
+                loop.AddEvent(NMuhEv::TEvSpec {
+                    .Ident = (uintptr_t)std::get<0>(node),
+                    .Filter = NMuhEv::MUHEV_FILTER_READ,
+                    .Flags = NMuhEv::MUHEV_FLAG_NONE,
+                    .Ctx = nullptr
+                });
+            }
+
             while(true) {
-                auto list = NMuhEv::MakeEvList(binds.size());
+                std::vector<NMuhEv::TEvSpec> list;
+                list.reserve(binds.size());
 
-                for (const auto& node : binds) {
-                    loop.AddEvent(NMuhEv::TEvSpec {
-                        .Ident = (uintptr_t)std::get<0>(node),
-                        .Filter = NMuhEv::MUHEV_FILTER_READ,
-                        .Flags = NMuhEv::MUHEV_FLAG_NONE,
-                        .Ctx = nullptr
-                    }, list);
-                }
+                bool ok = loop.Wait(list);
 
-                int triggeredCount = loop.Wait(list);
-
-                if(triggeredCount < 0) {
+                if (!ok) {
                     perror("kevent");
                     abort();
 
-                } else if(triggeredCount > 0) {
-                    for(int i = 0; i < triggeredCount; ++i) {
-                        const auto& event = NMuhEv::GetEvent(list, i);
+                } else if (list.size() > 0) {
+                    for (const auto& event : list) {
                         auto addr = std::make_shared<sockaddr_in>();
                         socklen_t len = sizeof(sockaddr_in);
 
