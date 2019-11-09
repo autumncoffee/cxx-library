@@ -82,6 +82,12 @@ namespace NAC {
             Destroyed = false;
         }
 
+        TNetClient::~TNetClient() {
+            if (SSL_) {
+                SSL_free(SSL_);
+            }
+        }
+
         void TNetClient::Cb(const NMuhEv::TEvSpec& event) {
             assert(event.Ident == ((TNetClient::TArgs*)Args.get())->Fh);
 

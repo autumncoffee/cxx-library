@@ -142,6 +142,8 @@ namespace NAC {
         public:
             explicit TNetClient(TArgs* const args);
 
+            ~TNetClient();
+
             void Cb(const NMuhEv::TEvSpec& event) override;
 
             virtual void Destroy();
