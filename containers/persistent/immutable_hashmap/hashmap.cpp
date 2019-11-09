@@ -85,7 +85,7 @@ namespace NAC {
         uint64_t bucketCount,
         uint32_t seed
     )
-        : BucketCount(bucketCount)
+        : BucketCount_(bucketCount)
         , Seed(seed)
         , Path(path)
     {
@@ -97,7 +97,7 @@ namespace NAC {
 
         auto& file = File();
 
-        file.Resize(sizeof(uint64_t) * (1 + BucketCount));
+        file.Resize(sizeof(uint64_t) * (1 + BucketCount_));
         file.SeekToEnd();
         // file.MSync();
         // std::cerr << "Created: " << file.Size() << std::endl;
@@ -123,8 +123,8 @@ namespace NAC {
             return;
         }
 
-        memcpy(&BucketCount, File().Data(), sizeof(BucketCount));
-        BucketCount = ntoh(BucketCount);
+        memcpy(&BucketCount_, File().Data(), sizeof(BucketCount_));
+        BucketCount_ = ntoh(BucketCount_);
     }
 
     TPersistentImmutableHashMap::~TPersistentImmutableHashMap() {
@@ -137,13 +137,13 @@ namespace NAC {
 
         MurmurHash3_x64_128(key.Data(), key.Size(), Seed, &hash);
 
-        return (uint64_t)(hash % BucketCount);
+        return (uint64_t)(hash % BucketCount_);
         // std::cerr << "Bucket(" << (std::string)key << "): " << rv << std::endl;
         // return rv;
     }
 
     void TPersistentImmutableHashMap::Insert(const TBlob& key, const TBlob& value) {
-        if (!*this || (BucketCount == 0)) {
+        if (!*this || (BucketCount_ == 0)) {
             return;
         }
 
@@ -188,12 +188,12 @@ namespace NAC {
     }
 
     TBlob TPersistentImmutableHashMap::Get(const TBlob& key) const {
-        if (!*this || (BucketCount == 0)) {
+        if (!*this || (BucketCount_ == 0)) {
             return TBlob();
         }
 
         const auto* ptr = KeyPtr(key);
-        const size_t headerSize((sizeof(uint64_t) * (1 + BucketCount)));
+        const size_t headerSize((sizeof(uint64_t) * (1 + BucketCount_)));
 
         uint64_t tmp;
         memcpy(&tmp, ptr, sizeof(tmp));
@@ -238,7 +238,7 @@ namespace NAC {
 
     TPersistentImmutableHashMap::TIterator::TIterator(char* ptr, uint64_t bucketCount)
         : Ptr(ptr)
-        , BucketCount(bucketCount)
+        , BucketCount_(bucketCount)
     {
     }
 
@@ -256,7 +256,7 @@ namespace NAC {
                 if (Offset > 0) {
                     break;
 
-                } else if ((CurrentBucket + 1) == BucketCount) {
+                } else if ((CurrentBucket + 1) == BucketCount_) {
                     Ptr = nullptr;
                     return false;
 
@@ -268,7 +268,7 @@ namespace NAC {
 
         // std::cerr << "2: " << Offset << std::endl;
 
-        const size_t headerSize((sizeof(uint64_t) * (1 + BucketCount)));
+        const size_t headerSize((sizeof(uint64_t) * (1 + BucketCount_)));
         auto rv = TValue::Restore(Ptr + headerSize + Offset - 1);
         key.Wrap(rv.Key.Size(), rv.Key.Data());
         value.Wrap(rv.Value.Size(), rv.Value.Data());
@@ -276,7 +276,7 @@ namespace NAC {
         Offset = rv.Prev;
 
         if (Offset == 0) {
-            if ((CurrentBucket + 1) == BucketCount) {
+            if ((CurrentBucket + 1) == BucketCount_) {
                 Ptr = nullptr;
 
             } else {
@@ -290,10 +290,10 @@ namespace NAC {
     }
 
     TPersistentImmutableHashMap::TIterator TPersistentImmutableHashMap::GetAll() const {
-        if (!*this || (BucketCount == 0)) {
+        if (!*this || (BucketCount_ == 0)) {
             return TIterator();
         }
 
-        return TIterator(File().Data(), BucketCount);
+        return TIterator(File().Data(), BucketCount_);
     }
 }

@@ -43,7 +43,7 @@ namespace NAC {
 
         private:
             char* Ptr = nullptr;
-            uint64_t BucketCount = 0;
+            uint64_t BucketCount_ = 0;
             uint64_t CurrentBucket = 0;
             uint64_t Offset = 0;
         };
@@ -65,6 +65,10 @@ namespace NAC {
         );
 
         ~TPersistentImmutableHashMap();
+
+        uint64_t BucketCount() const {
+            return BucketCount_;
+        }
 
         void Insert(const TBlob& key, const TBlob& value);
 
@@ -135,7 +139,7 @@ namespace NAC {
         }
 
     private:
-        uint64_t BucketCount;
+        uint64_t BucketCount_;
         uint32_t Seed;
         std::string Path;
         char File_[sizeof(TFile)];
