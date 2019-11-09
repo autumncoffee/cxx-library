@@ -11,6 +11,10 @@ namespace NAC {
     {
         new (File_) TFile(path, TFile::ACCESS_RDONLY);
 
+        if (!*this) {
+            return;
+        }
+
         memcpy(&RecordSize_, File().Data(), sizeof(RecordSize_));
         RecordSize_ = ntoh(RecordSize_);
     }
@@ -23,6 +27,10 @@ namespace NAC {
         , RecordSize_(recordSize)
     {
         new (File_) TFile(path + ".new", TFile::ACCESS_CREATE);
+
+        if (!*this) {
+            return;
+        }
 
         recordSize = hton(recordSize);
         File().Append(sizeof(recordSize), (char*)&recordSize);
