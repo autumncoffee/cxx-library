@@ -46,6 +46,20 @@ namespace NAC {
         void TClientThread::Run() {
             NMuhEv::TLoop loop;
 
+            loop.AddEvent(NMuhEv::TEvSpec {
+                .Ident = (uintptr_t)Args->Fds[0],
+                .Filter = NMuhEv::MUHEV_FILTER_READ,
+                .Flags = NMuhEv::MUHEV_FLAG_NONE,
+                .Ctx = &AcceptContext
+            }, /* mod = */false);
+
+            loop.AddEvent(NMuhEv::TEvSpec {
+                .Ident = (uintptr_t)WakeupFds[0],
+                .Filter = NMuhEv::MUHEV_FILTER_READ,
+                .Flags = NMuhEv::MUHEV_FLAG_NONE,
+                .Ctx = &WakeupContext
+            }, /* mod = */false);
+
             while (true) {
                 std::vector<NMuhEv::TEvSpec> list;
                 list.reserve(ActiveClients.size() + 2);
@@ -61,20 +75,6 @@ namespace NAC {
                 }
 
                 ActiveClients.swap(newActiveClients);
-
-                loop.AddEvent(NMuhEv::TEvSpec {
-                    .Ident = (uintptr_t)Args->Fds[0],
-                    .Filter = NMuhEv::MUHEV_FILTER_READ,
-                    .Flags = NMuhEv::MUHEV_FLAG_NONE,
-                    .Ctx = &AcceptContext
-                });
-
-                loop.AddEvent(NMuhEv::TEvSpec {
-                    .Ident = (uintptr_t)WakeupFds[0],
-                    .Filter = NMuhEv::MUHEV_FILTER_READ,
-                    .Flags = NMuhEv::MUHEV_FLAG_NONE,
-                    .Ctx = &WakeupContext
-                });
 
                 bool ok = loop.Wait(list);
                 // NUtils::cluck(3, "Got %d events in thread %llu", triggeredCount, NUtils::ThreadId());
@@ -107,7 +107,7 @@ namespace NAC {
                                 try {
                                     Accept(loop);
 
-                                } catch(const std::exception& e) {
+                                } catch (const std::exception& e) {
                                     std::cerr << "Failed to accept client: " << e.what() << std::endl;
                                 }
                             }
@@ -146,7 +146,7 @@ namespace NAC {
 
                 std::unique_ptr<NNetServer::TBaseClient::TArgs> clientArgs(Args->ClientArgsFactory
                     ? Args->ClientArgsFactory()
-                    : new NNetServer::TBaseClient::TArgs
+                    : new NNetServer::TNetClient::TArgs
                 );
 
                 if (clientArgs->AddClient) {

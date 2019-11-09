@@ -155,7 +155,7 @@ namespace NAC {
                     .Filter = NMuhEv::MUHEV_FILTER_READ,
                     .Flags = NMuhEv::MUHEV_FLAG_NONE,
                     .Ctx = nullptr
-                });
+                }, /* mod = */false);
             }
 
             while(true) {

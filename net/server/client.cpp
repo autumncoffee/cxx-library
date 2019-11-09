@@ -33,6 +33,16 @@ namespace NAC {
         TNetClient::TNetClient(TArgs* const args)
             : TBaseClient(args)
         {
+            if (!args->Loop) {
+                std::cerr << "Missing event loop" << std::endl;
+                abort();
+            }
+
+            if (args->Fh == -1) {
+                std::cerr << "Missing socket" << std::endl;
+                abort();
+            }
+
             NSocketUtils::SetupSocket(args->Fh, 1000); // TODO: check return value
             fcntl(args->Fh, F_SETFL, fcntl(args->Fh, F_GETFL, 0) | O_NONBLOCK);
 
