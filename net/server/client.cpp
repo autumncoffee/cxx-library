@@ -330,6 +330,10 @@ namespace NAC {
         }
 
         void TNetClient::UpdateEvent() {
+            if (!IsAlive()) {
+                return;
+            }
+
             auto filter = (NMuhEv::MUHEV_FILTER_READ | (
                 ShouldWrite() ? NMuhEv::MUHEV_FILTER_WRITE : 0
             ));
