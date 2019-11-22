@@ -1,5 +1,8 @@
 #include "parser.hpp"
 #include <ac-common/utils/string.hpp>
+#include <stdexcept>
+#include <math.h>
+// #include <iostream>
 
 namespace NAC {
     namespace NHTTPLikeParser {
@@ -19,6 +22,7 @@ namespace NAC {
             std::vector<std::shared_ptr<TParsedData>> ParsedData;
             NUtils::TSpinLock ParsedDataLock;
             bool InferContentLength = false;
+            bool ChunkedEncoding = false;
             bool NoFirstLine = false;
             bool Copy = true;
             bool Stream = true;
@@ -93,6 +97,7 @@ namespace NAC {
             CurrentFirstLine = nullptr;
             CurrentHeaders = THeaders();
             InferContentLength = false;
+            ChunkedEncoding = false;
             NoFirstLine = false;
             Copy = true;
             Stream = true;
@@ -137,6 +142,36 @@ namespace NAC {
             // }
 
             if (state.InContent) {
+                if (state.ChunkedEncoding && (state.ContentLength == 0)) {
+                    if (localState.ProcessedLength < dataSize) {
+                        localState.ProcessedLength += 1; // '\n'
+                    }
+
+                    size_t len(0);
+
+                    for (; len < lineSize; ++len) {
+                        if (line[len] == '\r') {
+                            break;
+                        }
+                    }
+
+                    for (size_t i = 0; i < len; ++i) {
+                        static const unsigned char hex[256] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0, 0, 0, 0, 0, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+                        state.ContentLength += ((size_t)hex[line[i]]) * ((size_t)powl(16, (len - i - 1)));
+                    }
+
+                    state.OriginalContentLength += state.ContentLength;
+
+                    // std::cerr << "state.ContentLength: " << state.ContentLength << std::endl;
+
+                    if (state.ContentLength == 0) {
+                        state.Flush(localState);
+                    }
+
+                    return;
+                }
+
                 if (lineSize >= state.ContentLength) {
                     // std::cerr << "woot 1" << std::endl;
                     if (state.ContentLength > 0) {
@@ -144,9 +179,29 @@ namespace NAC {
 
                         line += state.ContentLength;
                         lineSize -= state.ContentLength;
+                        state.ContentLength = 0;
                     }
 
-                    state.Flush(localState);
+                    if (state.ChunkedEncoding) {
+                        if ((lineSize > 1) || ((lineSize == 1) && (line[0] != '\r'))) {
+                            throw std::logic_error("Bad request, state.OriginalContentLength: " + std::to_string(state.OriginalContentLength));
+                        }
+
+                        if (localState.ProcessedLength < dataSize) {
+                            localState.ProcessedLength += 1; // '\n'
+                        }
+
+                        // std::cerr << "awaiting flush [1], state.ContentLength: " << state.ContentLength << std::endl;
+
+                        return;
+
+                    } else {
+                        if ((lineSize == 0) && (localState.ProcessedLength < dataSize)) {
+                            localState.ProcessedLength += 1; // '\n'
+                        }
+
+                        state.Flush(localState);
+                    }
 
                 } else {
                     // std::cerr << "woot 2 | " << lineSize << " | " << localState.ProcessedLength << " | " << dataSize << std::endl;
@@ -164,12 +219,20 @@ namespace NAC {
 
                         if (state.ContentLength == 0) {
                             // std::cerr << "woot 4" << std::endl;
-                            state.Flush(localState);
+
+                            if (state.ChunkedEncoding) {
+                                // std::cerr << "awaiting flush [2], state.ContentLength: " << state.ContentLength << std::endl;
+                                return;
+
+                            } else {
+                                state.Flush(localState);
+                            }
                         }
                     }
                 }
 
                 if (lineSize == 0) {
+                    // std::cerr << "WOOT, state.ContentLength: " << state.ContentLength << std::endl;
                     return;
                 }
             }
@@ -306,9 +369,21 @@ namespace NAC {
 
                         } else if (state.InferContentLength) {
                             state.OriginalContentLength = state.ContentLength = (dataSize - localState.ProcessedLength);
+
+                        } else {
+                            const auto& transferEncoding = state.CurrentHeaders.find("transfer-encoding");
+
+                            if (transferEncoding != state.CurrentHeaders.end()) {
+                                std::string value(transferEncoding->second[0]);
+                                NStringUtils::ToLower(value);
+
+                                static const std::string chunked("chunked");
+
+                                state.ChunkedEncoding = (value == chunked);
+                            }
                         }
 
-                        state.InContent = (state.OriginalContentLength > 0);
+                        state.InContent = ((state.OriginalContentLength > 0) || state.ChunkedEncoding);
                     }
 
                     // std::cerr << "InContent: " << state.InContent << ", " << state.OriginalContentLength << std::endl;
