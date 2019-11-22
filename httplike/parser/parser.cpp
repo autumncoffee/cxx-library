@@ -2,7 +2,7 @@
 #include <ac-common/utils/string.hpp>
 #include <stdexcept>
 #include <math.h>
-// #include <iostream>
+#include <iostream>
 
 namespace NAC {
     namespace NHTTPLikeParser {
@@ -29,6 +29,7 @@ namespace NAC {
             size_t EffectiveLength = 0;
             size_t MemMax;
             std::string DiskMask;
+            TBlob Buf;
 
             TParserState(size_t memMax, const std::string& diskMask)
                 : CurrentRequest(TMemDisk(memMax, diskMask))
@@ -143,8 +144,22 @@ namespace NAC {
 
             if (state.InContent) {
                 if (state.ChunkedEncoding && (state.ContentLength == 0)) {
-                    if (localState.ProcessedLength < dataSize) {
-                        localState.ProcessedLength += 1; // '\n'
+                    if (localState.ProcessedLength >= dataSize) {
+                        // std::cerr << "BUF CHUNK SIZE" << std::endl;
+                        // we're in the middle of data here and need more read()'s
+                        if (lineSize > 0) {
+                            state.Buf.Append(lineSize, line);
+                        }
+
+                        return;
+                    }
+
+                    localState.ProcessedLength += 1; // '\n'
+
+                    if (state.Buf.Size() > 0) {
+                        state.Buf.Append(lineSize, line);
+                        line = state.Buf.Data();
+                        lineSize = state.Buf.Size();
                     }
 
                     size_t len(0);
@@ -161,6 +176,7 @@ namespace NAC {
                         state.ContentLength += ((size_t)hex[line[i]]) * ((size_t)powl(16, (len - i - 1)));
                     }
 
+                    state.Buf.Shrink(0);
                     state.OriginalContentLength += state.ContentLength;
 
                     // std::cerr << "state.ContentLength: " << state.ContentLength << std::endl;
@@ -192,7 +208,6 @@ namespace NAC {
                         }
 
                         // std::cerr << "awaiting flush [1], state.ContentLength: " << state.ContentLength << std::endl;
-
                         return;
 
                     } else {
@@ -424,6 +439,10 @@ namespace NAC {
                     data + prevOffset,
                     dataSize
                 );
+            }
+
+            if (dataSize != localState.ProcessedLength) {
+                std::cerr << "[WARN] dataSize: " << dataSize << ", localState.ProcessedLength: " << localState.ProcessedLength << std::endl;
             }
         }
 
