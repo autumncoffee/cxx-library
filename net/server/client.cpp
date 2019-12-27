@@ -316,13 +316,15 @@ namespace NAC {
                     break;
 
                 } else {
-                    if ((len == written) && (next != item.DataLast)) {
+                    if (next == item.DataLast) {
+                        item.DataPos += written;
+
+                    } else {
                         item.DataLast = next;
-                        item.DataPos = 0;
+                        item.DataPos = written;
                     }
 
                     item.Pos += written;
-                    item.DataPos += written;
                 }
             }
 
