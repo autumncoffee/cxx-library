@@ -52,10 +52,6 @@ namespace NAC {
             Insert(TBlob(sizeof(key), (char*)&key), value);
         }
 
-        void Insert(size_t key, const TBlob& value) {
-            Insert((uint64_t)key, value);
-        }
-
         void Insert(const char* key) {
             Insert(TBlob(strlen(key), key));
         }
@@ -70,10 +66,6 @@ namespace NAC {
 
         void Insert(uint8_t key) {
             Insert(TBlob(sizeof(key), (char*)&key));
-        }
-
-        void Insert(size_t key) {
-            Insert((uint64_t)key);
         }
 
         TBlob Get(const TBlob& key) const;
@@ -92,10 +84,6 @@ namespace NAC {
 
         TBlob Get(uint8_t key) const {
             return Get(TBlob(sizeof(key), (char*)&key));
-        }
-
-        TBlob Get(size_t key) const {
-            return Get((uint64_t)key);
         }
 
         template<typename T>
