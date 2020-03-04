@@ -19,7 +19,7 @@ namespace NAC {
         {
             std::queue<std::pair<std::string*, bool>> out {{
                 {&Method_, true},
-                {&Path_, true},
+                {&Path_, false},
                 {&Protocol_, false}
             }};
 

@@ -54,7 +54,7 @@ namespace NAC {
 
         void TRouter::Add(const std::string& path, std::shared_ptr<NHTTPHandler::THandler> handler) {
             pcrecpp::RE_Options opt;
-            // opt.set_caseless(true); // pathes are already lowercased
+            opt.set_caseless(true);
 
             pcrecpp::RE re(path, opt);
 
