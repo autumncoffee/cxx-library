@@ -12,10 +12,6 @@ if (NOT TARGET ac_library_http_server)
     add_subdirectory("server")
 endif()
 
-if (NOT TARGET ac_library_http_client)
-    add_subdirectory("client")
-endif()
-
 if (NOT TARGET ac_library_http_handler)
     add_subdirectory("handler")
 endif()
@@ -32,14 +28,18 @@ if (NOT TARGET ac_library_websocket_parser)
     add_subdirectory("../websocket/parser" ac_library_websocket_parser_bindir)
 endif()
 
+if (NOT TARGET ac_library_http_client)
+    add_subdirectory("client")
+endif()
+
 add_library(ac_library_http STATIC ${AC_LIBRARY_HTTP_SOURCES})
 
 target_link_libraries(
     ac_library_http
     ac_library_httplike_server
     ac_library_httplike_parser
-    ac_library_http_server
     ac_library_http_client
+    ac_library_http_server
     ac_library_http_utils
     ac_library_websocket_parser
     ac_common_utils
