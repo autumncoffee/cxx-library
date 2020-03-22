@@ -14,11 +14,10 @@
 
 namespace NAC {
     namespace NNetServer {
-        class TBaseClient {
+        class TBaseClient : public NMuhEv::TNode {
         public:
             struct TArgs {
                 NMuhEv::TLoop* Loop = nullptr;
-                int WakeupFd = -1;
                 TAddClient AddClient;
 
                 virtual ~TArgs() {
@@ -35,12 +34,10 @@ namespace NAC {
             virtual ~TBaseClient() {
             }
 
-            NMuhEv::TLoop& Loop() {
+            NMuhEv::TLoop& Loop() const {
                 return *Args->Loop;
             }
 
-            virtual void Cb(const NMuhEv::TEvSpec& event) = 0;
-            virtual bool IsAlive() const = 0;
             virtual bool ShouldWrite() = 0;
             virtual void Drop() = 0;
 
@@ -84,7 +81,6 @@ namespace NAC {
                 std::unique_ptr<typename T::TArgs> clientArgs(new typename T::TArgs(std::forward<TArgs>(forwardClientArgs)...));
                 clientArgs->Loop = Args->Loop;
                 clientArgs->Fh = fh;
-                clientArgs->WakeupFd = Args->WakeupFd;
                 clientArgs->Addr = addr;
                 clientArgs->AddClient = Args->AddClient;
 
@@ -101,7 +97,6 @@ namespace NAC {
 
         protected:
             std::shared_ptr<TArgs> Args;
-            NMuhEv::TEvSpec EvSpec;
 
         private:
             std::weak_ptr<TBaseClient> SelfWeakPtr;
@@ -144,7 +139,7 @@ namespace NAC {
 
             ~TNetClient();
 
-            void Cb(const NMuhEv::TEvSpec& event) override;
+            void Cb(int, int) override;
 
             virtual void Destroy();
 
@@ -192,12 +187,11 @@ namespace NAC {
             virtual void OnData(const size_t dataSize, char* data) = 0;
 
             virtual int ReadFromSocket(
-                const int fh,
                 void* buf,
                 const size_t bufSize
             );
 
-            int Write(TWriteQueueItem& item, const int fh);
+            int Write(TWriteQueueItem& item);
 
             virtual int WriteToSocket(
                 const int fh,

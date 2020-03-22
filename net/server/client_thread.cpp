@@ -19,51 +19,24 @@ namespace NAC {
             : ClientFactory(clientFactory)
             , ClientArgsFactory(clientArgsFactory)
         {
-            if(socketpair(PF_LOCAL, SOCK_STREAM, 0, Fds) == -1) {
-                perror("socketpair");
-                abort();
-            }
-        }
-
-        TClientThreadArgs::~TClientThreadArgs() {
-            for (int i = 0; i < 2; ++i) {
-                close(Fds[i]);
-            }
         }
 
         TClientThread::TClientThread(std::shared_ptr<TClientThreadArgs> args)
             : NAC::NBase::TWorkerLite()
             , Args(args)
         {
-            AcceptContext = WakeupContext = '\0';
+            Acceptor = Loop.NewTrigger([this](){
+                try {
+                    Accept(Loop);
 
-            if (socketpair(PF_LOCAL, SOCK_STREAM, 0, WakeupFds) == -1) {
-                perror("socketpair");
-                abort();
-            }
+                } catch (const std::exception& e) {
+                    std::cerr << "Failed to accept client: " << e.what() << std::endl;
+                }
+            });
         }
 
         void TClientThread::Run() {
-            NMuhEv::TLoop loop;
-
-            loop.AddEvent(NMuhEv::TEvSpec {
-                .Ident = (uintptr_t)Args->Fds[0],
-                .Filter = NMuhEv::MUHEV_FILTER_READ,
-                .Flags = NMuhEv::MUHEV_FLAG_NONE,
-                .Ctx = &AcceptContext
-            }, /* mod = */false);
-
-            loop.AddEvent(NMuhEv::TEvSpec {
-                .Ident = (uintptr_t)WakeupFds[0],
-                .Filter = NMuhEv::MUHEV_FILTER_READ,
-                .Flags = NMuhEv::MUHEV_FLAG_NONE,
-                .Ctx = &WakeupContext
-            }, /* mod = */false);
-
             while (true) {
-                std::vector<NMuhEv::TEvSpec> list;
-                list.reserve(ActiveClients.size() + 2);
-
                 decltype(ActiveClients) newActiveClients;
 
                 for (auto client : ActiveClients) {
@@ -76,63 +49,9 @@ namespace NAC {
 
                 ActiveClients.swap(newActiveClients);
 
-                bool ok = loop.Wait(list);
-                // NUtils::cluck(3, "Got %d events in thread %llu", triggeredCount, NUtils::ThreadId());
-
-                if (!ok) {
+                if (!Loop.Wait()) {
                     perror("kevent");
                     abort();
-
-                } else if (list.size() > 0) {
-                    for (const auto& event : list) {
-                        if ((event.Ctx == &AcceptContext) || (event.Ctx == &WakeupContext)) {
-                            {
-                                char dummy[128];
-                                int rv = recvfrom(
-                                    event.Ident,
-                                    dummy,
-                                    128,
-                                    MSG_DONTWAIT,
-                                    NULL,
-                                    0
-                                );
-
-                                if (rv < 0) {
-                                    perror("recvfrom");
-                                    abort();
-                                }
-                            }
-
-                            if (event.Ctx == &AcceptContext) {
-                                try {
-                                    Accept(loop);
-
-                                } catch (const std::exception& e) {
-                                    std::cerr << "Failed to accept client: " << e.what() << std::endl;
-                                }
-                            }
-
-                        } else {
-                            auto client = (NNetServer::TBaseClient*)event.Ctx;
-
-                            if (client->IsAlive()) {
-                                try {
-                                    client->Cb(event);
-
-                                } catch (const std::exception& e) {
-                                    std::cerr << "Failed to execute client callback: " << e.what() << std::endl;
-                                    client->Drop();
-                                }
-
-                            } else {
-                                // TODO
-                                // NUtils::cluck(1, "dead client");
-                            }
-                        }
-                    }
-
-                } else {
-                    // NUtils::cluck(1, "nothing is here");
                 }
             }
         }
@@ -154,7 +73,6 @@ namespace NAC {
                 }
 
                 clientArgs->Loop = &loop;
-                clientArgs->WakeupFd = WakeupFds[1];
 
                 if (auto* netClientArgs = dynamic_cast<NNetServer::TNetClient::TArgs*>(clientArgs.get())) {
                     netClientArgs->Fh = newClient->Fh;

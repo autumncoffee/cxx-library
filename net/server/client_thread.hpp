@@ -21,7 +21,6 @@ namespace NAC {
         struct TClientThreadArgs {
             std::queue<std::shared_ptr<TNewClient>> Queue;
             NUtils::TSpinLock Mutex;
-            int Fds[2];
 
             TClientFactory& ClientFactory;
             TClientArgsFactory& ClientArgsFactory;
@@ -30,7 +29,6 @@ namespace NAC {
             bool UseSSL = false;
 
             TClientThreadArgs(TClientFactory&, TClientArgsFactory&);
-            ~TClientThreadArgs();
         };
 
         class TClientThread : public NAC::NBase::TWorkerLite {
@@ -39,15 +37,18 @@ namespace NAC {
 
             void Run() override;
 
+            void TriggerAcceptor() {
+                Acceptor->Trigger();
+            }
+
         private:
             void Accept(NMuhEv::TLoop& loop);
 
         private:
             std::shared_ptr<TClientThreadArgs> Args;
             std::deque<std::shared_ptr<NNetServer::TBaseClient>> ActiveClients;
-            int WakeupFds[2];
-            char WakeupContext;
-            char AcceptContext;
+            NMuhEv::TLoop Loop;
+            std::unique_ptr<NMuhEv::TTriggerNodeBase> Acceptor;
         };
     }
 }

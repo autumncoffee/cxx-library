@@ -3,17 +3,17 @@
 #include <iostream>
 #include <ac-common/utils/socket.hpp>
 #include <fcntl.h>
-#include <assert.h>
 
 namespace NAC {
     namespace NNetServer {
         TBaseClient::TBaseClient(TArgs* const args)
-            : Args(args)
+            : NMuhEv::TNode(-1)
+            , Args(args)
         {
         }
 
         void TBaseClient::WakeLoop() const {
-            ::write(Args->WakeupFd, "1", 1);
+            Loop().Wake();
         }
 
         void TBaseClient::SetWeakPtr(const std::shared_ptr<TBaseClient>& ptr) {
@@ -46,12 +46,11 @@ namespace NAC {
             NSocketUtils::SetupSocket(args->Fh, 1000); // TODO: check return value
             fcntl(args->Fh, F_SETFL, fcntl(args->Fh, F_GETFL, 0) | O_NONBLOCK);
 
-            EvSpec.Ident = args->Fh;
-            EvSpec.Filter = NMuhEv::MUHEV_FILTER_READ;
-            EvSpec.Flags = NMuhEv::MUHEV_FLAG_NONE;
-            EvSpec.Ctx = this;
+            EvIdent = args->Fh;
+            EvFilter = NMuhEv::MUHEV_FILTER_READ;
+            EvFlags = NMuhEv::MUHEV_FLAG_NONE;
 
-            Loop().AddEvent(EvSpec, /* mod = */false);
+            Loop().AddEvent(*this, /* mod = */false);
 
             if (args->UseSSL && args->SSLCtx) {
                 SSL_ = SSL_new(args->SSLCtx);
@@ -88,26 +87,24 @@ namespace NAC {
             }
         }
 
-        void TNetClient::Cb(const NMuhEv::TEvSpec& event) {
-            assert(event.Ident == ((TNetClient::TArgs*)Args.get())->Fh);
-
-            if (event.Flags & NMuhEv::MUHEV_FLAG_ERROR) {
+        void TNetClient::Cb(int filter, int flags) {
+            if (flags & NMuhEv::MUHEV_FLAG_ERROR) {
                 std::cerr << "EV_ERROR" << std::endl;
                 Drop();
                 return;
             }
 
-            if (event.Flags & NMuhEv::MUHEV_FLAG_EOF) {
+            if (flags & NMuhEv::MUHEV_FLAG_EOF) {
                 // NUtils::cluck(1, "EV_EOF");
                 Drop();
                 return;
             }
 
-            if (event.Filter & NMuhEv::MUHEV_FILTER_READ) {
+            if (filter & NMuhEv::MUHEV_FILTER_READ) {
                 while (true) {
                     static const size_t bufSize = 8192;
                     char buf[bufSize];
-                    int read = ReadFromSocket(event.Ident, buf, bufSize);
+                    int read = ReadFromSocket(buf, bufSize);
 
                     if (read > 0) {
                         OnData(read, buf);
@@ -128,7 +125,7 @@ namespace NAC {
                 }
             }
 
-            if (event.Filter & NMuhEv::MUHEV_FILTER_WRITE) {
+            if (filter & NMuhEv::MUHEV_FILTER_WRITE) {
                 while (true) {
                     auto item = GetWriteItem();
 
@@ -137,7 +134,7 @@ namespace NAC {
                         break;
                     }
 
-                    const int written = Write(*item, event.Ident);
+                    const int written = Write(*item);
 
                     if (written < 0) {
                         auto e = errno;
@@ -159,7 +156,6 @@ namespace NAC {
         }
 
         int TNetClient::ReadFromSocket(
-            const int fh,
             void* buf,
             const size_t bufSize
         ) {
@@ -196,7 +192,7 @@ namespace NAC {
                 return rv;
 
             } else {
-                return ::recvfrom(fh, buf, bufSize, MSG_DONTWAIT, NULL, 0);
+                return ::recvfrom(EvIdent, buf, bufSize, MSG_DONTWAIT, NULL, 0);
             }
         }
 
@@ -280,7 +276,7 @@ namespace NAC {
                 return;
             }
 
-            Loop().RemoveEvent(EvSpec.Ident);
+            Loop().RemoveEvent(*this);
 
             shutdown(((TNetClient::TArgs*)Args.get())->Fh, SHUT_RDWR);
             close(((TNetClient::TArgs*)Args.get())->Fh);
@@ -294,7 +290,7 @@ namespace NAC {
             }
         }
 
-        int TNetClient::Write(TWriteQueueItem& item, const int fh) {
+        int TNetClient::Write(TWriteQueueItem& item) {
             if (item.Dummy) {
                 return WriteToSocket(-1, nullptr, 0);
             }
@@ -310,7 +306,7 @@ namespace NAC {
                 size_t len = 0;
 
                 const char* str = item.Sequence.Read(item.DataLast, item.DataPos, &len, &next);
-                written = WriteToSocket(fh, str, len);
+                written = WriteToSocket(EvIdent, str, len);
 
                 if (written < 0) {
                     break;
@@ -340,9 +336,9 @@ namespace NAC {
                 ShouldWrite() ? NMuhEv::MUHEV_FILTER_WRITE : 0
             ));
 
-            if (filter != EvSpec.Filter) {
-                EvSpec.Filter = filter;
-                Loop().AddEvent(EvSpec);
+            if (filter != EvFilter) {
+                EvFilter = filter;
+                Loop().AddEvent(*this);
             }
         }
     }

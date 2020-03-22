@@ -8,8 +8,8 @@ namespace NAC {
             return Parser.ExtractData();
         }
 
-        void TClient::Cb(const NMuhEv::TEvSpec& event) {
-            NNetServer::TNetClient::Cb(event);
+        void TClient::Cb(int filter, int flags) {
+            NNetServer::TNetClient::Cb(filter, flags);
 
             const auto& data = GetData();
 

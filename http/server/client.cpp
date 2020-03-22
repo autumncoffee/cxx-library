@@ -98,8 +98,8 @@ namespace NAC {
             PushWriteQueueData((TBlobSequence)response);
         }
 
-        void TClientBase::Cb(const NMuhEv::TEvSpec& event) {
-            NHTTPLikeServer::TClient::Cb(event);
+        void TClientBase::Cb(int filter, int flags) {
+            NHTTPLikeServer::TClient::Cb(filter, flags);
 
             if (WebSocketParser) {
                 const auto& data = GetWSData();

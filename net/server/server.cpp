@@ -16,12 +16,12 @@ namespace {
     ) {
         static const int yes = 1;
 
-        if(setsockopt(fh, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {
+        if (setsockopt(fh, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {
             perror("setsockopt");
             throw std::runtime_error("Socket error");
         }
 
-        if(bind(fh, (sockaddr*)&addr, sizeof(addr)) != 0) {
+        if (bind(fh, (sockaddr*)&addr, sizeof(addr)) != 0) {
             perror("bind");
             throw std::runtime_error("Socket error");
         }
@@ -43,6 +43,48 @@ namespace NAC {
     }
 
     namespace NNetServer {
+        using TThreads = NUtils::TRoundRobinVector<TClientThreadPair>;
+
+        class TAcceptor : public NMuhEv::TNode {
+        public:
+            TAcceptor(int fh, TThreads& threads)
+                : NMuhEv::TNode(fh, NMuhEv::MUHEV_FILTER_READ)
+                , Threads(threads)
+            {
+            }
+
+            void Cb(int, int) override {
+                auto addr = std::make_shared<sockaddr_in>();
+                socklen_t len = sizeof(sockaddr_in);
+
+                int fh = accept(EvIdent, (sockaddr*)addr.get(), &len);
+
+                if(fh < 0) {
+                    perror("accept");
+                    // free(addr);
+                    return;
+                }
+
+                std::shared_ptr<TNewClient> newClient;
+                newClient.reset(new TNewClient {
+                    .Fh = fh,
+                    .Addr = addr
+                });
+
+                auto thread = Threads.Next();
+
+                NUtils::TSpinLockGuard guard(thread.first->Mutex);
+
+                thread.first->Queue.push(newClient);
+
+                // NUtils::cluck(1, "push_new_client()");
+                thread.second->TriggerAcceptor();
+            }
+
+        private:
+            TThreads& Threads;
+        };
+
         TServer::TServer(const TArgs& args)
             : NAC::NBase::TWorkerLite()
             , Args(args)
@@ -127,7 +169,7 @@ namespace NAC {
                 return;
             }
 
-            NUtils::TRoundRobinVector<TClientThreadPair> threads;
+            TThreads threads;
 
             for (size_t i = 0; i < Args.ThreadCount; ++i) {
                 std::shared_ptr<TClientThreadArgs> args;
@@ -148,54 +190,20 @@ namespace NAC {
             }
 
             NMuhEv::TLoop loop;
+            std::vector<std::unique_ptr<TAcceptor>> acceptors;
 
             for (const auto& node : binds) {
-                loop.AddEvent(NMuhEv::TEvSpec {
-                    .Ident = (uintptr_t)std::get<0>(node),
-                    .Filter = NMuhEv::MUHEV_FILTER_READ,
-                    .Flags = NMuhEv::MUHEV_FLAG_NONE,
-                    .Ctx = nullptr
-                }, /* mod = */false);
+                auto acceptor = std::make_unique<TAcceptor>(std::get<0>(node), threads);
+
+                loop.AddEvent(*acceptor, /* mod = */false);
+
+                acceptors.push_back(std::move(acceptor));
             }
 
-            while(true) {
-                std::vector<NMuhEv::TEvSpec> list;
-                list.reserve(binds.size());
-
-                bool ok = loop.Wait(list);
-
-                if (!ok) {
+            while (true) {
+                if (!loop.Wait()) {
                     perror("kevent");
                     abort();
-
-                } else if (list.size() > 0) {
-                    for (const auto& event : list) {
-                        auto addr = std::make_shared<sockaddr_in>();
-                        socklen_t len = sizeof(sockaddr_in);
-
-                        int fh = accept(event.Ident, (sockaddr*)addr.get(), &len);
-
-                        if(fh < 0) {
-                            perror("accept");
-                            // free(addr);
-                            continue;
-                        }
-
-                        std::shared_ptr<TNewClient> newClient;
-                        newClient.reset(new TNewClient {
-                            .Fh = fh,
-                            .Addr = addr
-                        });
-
-                        auto thread = threads.Next();
-
-                        NUtils::TSpinLockGuard guard(thread.first->Mutex);
-
-                        thread.first->Queue.push(newClient);
-
-                        // NUtils::cluck(1, "push_new_client()");
-                        ::write(thread.first->Fds[1], "1", 1);
-                    }
                 }
             }
         }

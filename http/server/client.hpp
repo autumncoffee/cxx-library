@@ -13,7 +13,7 @@ namespace NAC {
             using NHTTPLikeServer::TClient::TClient;
 
         public:
-            void Cb(const NMuhEv::TEvSpec& event) override;
+            void Cb(int, int) override;
             std::vector<std::shared_ptr<NWebSocketParser::TFrame>> GetWSData();
 
             using NHTTPLikeServer::TClient::PushWriteQueue;
