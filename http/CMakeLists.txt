@@ -12,6 +12,10 @@ if (NOT TARGET ac_library_http_server)
     add_subdirectory("server")
 endif()
 
+if (NOT TARGET ac_library_http_client)
+    add_subdirectory("client")
+endif()
+
 if (NOT TARGET ac_library_http_handler)
     add_subdirectory("handler")
 endif()
@@ -35,6 +39,7 @@ target_link_libraries(
     ac_library_httplike_server
     ac_library_httplike_parser
     ac_library_http_server
+    ac_library_http_client
     ac_library_http_utils
     ac_library_websocket_parser
     ac_common_utils
