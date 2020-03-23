@@ -142,7 +142,7 @@ namespace NAC {
         uint64_t BucketCount_;
         uint32_t Seed;
         std::string Path;
-        char File_[sizeof(TFile)];
+        alignas(TFile) char File_[sizeof(TFile)];
         size_t DataPos = 1;
     };
 }

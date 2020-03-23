@@ -86,6 +86,6 @@ namespace NAC {
     private:
         std::string Path;
         uint64_t RecordSize_ = 0;
-        char File_[sizeof(TFile)];
+        alignas(TFile) char File_[sizeof(TFile)];
     };
 }

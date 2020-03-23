@@ -303,7 +303,7 @@ namespace NAC {
         std::shared_ptr<WT_SESSION> Session;
         size_t RefCount = 0;
         size_t ActiveTransactions = 0;
-        unsigned char Transaction_[sizeof(TWiredTigerTransaction)];
+        alignas(TWiredTigerTransaction) unsigned char Transaction_[sizeof(TWiredTigerTransaction)];
     };
 
     TWiredTigerSession::TWiredTigerSession(void* ptr)
