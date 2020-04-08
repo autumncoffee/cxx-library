@@ -86,6 +86,7 @@ namespace NAC {
                     out.Append(1, &Plus);
 
                 } else if (ShouldEscape[data[i]]) {
+                    out.Append(1, "%");
                     out.Append(1, &CharTable[data[i] >> 4]);
                     out.Append(1, &CharTable[data[i] & 0xf]);
 
