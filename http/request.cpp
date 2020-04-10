@@ -1,5 +1,4 @@
 #include "request.hpp"
-#include "urlescape.hpp"
 #include <utility>
 #include <queue>
 #include <ac-common/utils/string.hpp>
@@ -50,62 +49,23 @@ namespace NAC {
 
             i = offset = 0;
             bool inQueryParams = false;
-            bool inKey = true;
-            std::string key;
             size_t pathSize = Path_.size();
 
             for (; i < Path_.size(); ++i) {
                 const char chr = Path_[i];
 
-                if((chr == '?') && !inQueryParams) {
+                if ((chr == '?') && !inQueryParams) {
                     inQueryParams = true;
                     offset = i + 1;
                     pathSize = i;
                     continue;
                 }
 
-                if(!inQueryParams)
+                if (!inQueryParams)
                     continue;
 
-                const bool isLast = (i == (Path_.size() - 1));
-
-                if(inKey) {
-                    if((chr == '=') || (chr == '&') || isLast || (chr == '#')) {
-                        key.assign(Path_.data() + offset, i + ((isLast && (chr != '=') && (chr != '&') && (chr != '#')) ? 1 : 0) - offset);
-                        NStringUtils::ToLower(key);
-                        URLUnescape(key);
-
-                        offset = i + 1;
-
-                        if((chr == '=') && !isLast) {
-                            inKey = false;
-
-                        } else if(key.size() > 0) {
-                            QueryParams_[key].emplace_back();
-                        }
-                    }
-
-                } else {
-                    if((chr == '&') || isLast || (chr == '#')) {
-                        const size_t size = i + ((isLast && (chr != '&') && (chr != '#')) ? 1 : 0) - offset;
-
-                        if(size > 0) {
-                            std::string value(Path_.data() + offset, size);
-                            URLUnescape(value);
-
-                            QueryParams_[key].emplace_back(std::move(value));
-
-                        } else if(key.size() > 0) {
-                            QueryParams_[key].emplace_back();
-                        }
-
-                        offset = i + 1;
-                        inKey = true;
-                    }
-                }
-
-                if(chr == '#')
-                    break;
+                QueryParams_ = ParseQueryParams(Path_.size() - offset, Path_.data() + offset);
+                break;
             }
 
             Path_.resize(pathSize);
@@ -113,6 +73,8 @@ namespace NAC {
             const auto& headers = Headers();
             const auto& cookies_ = headers.find("cookie");
             bool haveKey;
+            bool inKey;
+            std::string key;
 
             if (cookies_ != headers.end()) {
                 const auto& cookies = cookies_->second.front();

@@ -1,5 +1,6 @@
 #include "urlescape.hpp"
 #include <iostream>
+#include <ac-common/utils/string.hpp>
 
 namespace {
     static const bool Hex[256] = {
@@ -92,6 +93,59 @@ namespace NAC {
 
                 } else {
                     out.Append(1, &data[i]);
+                }
+            }
+
+            return out;
+        }
+
+        TQueryParams ParseQueryParams(const size_t size, const char* data) {
+            TQueryParams out;
+            bool inKey(true);
+            std::string key;
+            size_t offset(0);
+
+            for (size_t i = 0; i < size; ++i) {
+                const char chr(data[i]);
+                const bool isLast(i == (size - 1));
+
+                if (inKey) {
+                    if ((chr == '=') || (chr == '&') || isLast || (chr == '#')) {
+                        key.assign(data + offset, i + ((isLast && (chr != '=') && (chr != '&') && (chr != '#')) ? 1 : 0) - offset);
+                        NStringUtils::ToLower(key);
+                        URLUnescape(key);
+
+                        offset = i + 1;
+
+                        if ((chr == '=') && !isLast) {
+                            inKey = false;
+
+                        } else if (key.size() > 0) {
+                            out[key].emplace_back();
+                        }
+                    }
+
+                } else {
+                    if ((chr == '&') || isLast || (chr == '#')) {
+                        const size_t size(i + ((isLast && (chr != '&') && (chr != '#')) ? 1 : 0) - offset);
+
+                        if (size > 0) {
+                            std::string value(data + offset, size);
+                            URLUnescape(value);
+
+                            out[key].emplace_back(std::move(value));
+
+                        } else if (key.size() > 0) {
+                            out[key].emplace_back();
+                        }
+
+                        offset = i + 1;
+                        inKey = true;
+                    }
+                }
+
+                if (chr == '#') {
+                    break;
                 }
             }
 

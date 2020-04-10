@@ -6,6 +6,7 @@
 #include <ac-common/maybe.hpp>
 #include <utility>
 #include "message.hpp"
+#include "urlescape.hpp"
 
 #define AC_HTTP_REQUEST_CODE_SHORTCUT(code, msg) \
 TResponse Respond ## code() const { \
@@ -23,7 +24,6 @@ void Send(type data) const { \
 
 namespace NAC {
     namespace NHTTP {
-        using TQueryParams = std::unordered_map<std::string, std::vector<std::string>>;
         using TCookies = std::unordered_map<std::string, std::string>;
 
         struct TRangeSpec {
