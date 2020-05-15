@@ -742,7 +742,8 @@ namespace NAC {
         TRBTreeNode root(ptr + currentOffset);
 
         while (true) {
-            const int rv = root.Key().PrefixCmp(prefix);
+            auto key = root.Key();
+            const int rv = key.PrefixCmp(prefix);
 
             if (rv < 0) {
                 if (root.Right() > 0) {
@@ -770,7 +771,7 @@ namespace NAC {
 
             } else {
                 TRACE("found");
-                return TIterator(ptr, currentOffset, TBlob(prefix.Size(), prefix.Data()));
+                return TIterator(ptr, currentOffset, TBlob(prefix.Size(), key.Data()));
             }
         }
     }
