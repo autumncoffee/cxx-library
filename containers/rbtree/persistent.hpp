@@ -2,6 +2,7 @@
 
 #include "rbtree.hpp"
 #include <ac-common/file.hpp>
+#include <stdexcept>
 
 namespace NAC {
     class TPersistentRBTreeOps;
