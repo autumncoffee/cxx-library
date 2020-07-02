@@ -370,6 +370,20 @@ namespace NAC {
                                 value
                             );
 
+                            static const std::string transferEncoding("transfer-encoding");
+
+                            if (key == transferEncoding) {
+                                static const std::string chunked("chunked");
+
+                                std::string valueLower(value);
+                                NStringUtils::ToLower(valueLower);
+
+                                if (valueLower == chunked) {
+                                    state.ChunkedEncoding = true;
+                                    continue;
+                                }
+                            }
+
                             state.CurrentHeaders[key].emplace_back(value);
                         }
                     }
@@ -384,18 +398,6 @@ namespace NAC {
 
                         } else if (state.InferContentLength) {
                             state.OriginalContentLength = state.ContentLength = (dataSize - localState.ProcessedLength);
-
-                        } else {
-                            const auto& transferEncoding = state.CurrentHeaders.find("transfer-encoding");
-
-                            if (transferEncoding != state.CurrentHeaders.end()) {
-                                std::string value(transferEncoding->second[0]);
-                                NStringUtils::ToLower(value);
-
-                                static const std::string chunked("chunked");
-
-                                state.ChunkedEncoding = (value == chunked);
-                            }
                         }
 
                         state.InContent = ((state.OriginalContentLength > 0) || state.ChunkedEncoding);
