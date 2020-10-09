@@ -198,9 +198,7 @@ namespace NAC {
         const size_t expectedSize(headerSize + DataPos - 1);
 
         if (File().Size() < expectedSize) {
-            File().MSync();
-
-            ((TFile*)File_)->Resize(expectedSize);
+            ((TFile*)File_)->Remap(expectedSize);
 
             if (!*this) {
                 return TBlob();
