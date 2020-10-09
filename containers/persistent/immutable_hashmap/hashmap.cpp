@@ -193,7 +193,6 @@ namespace NAC {
             return TBlob();
         }
 
-        const auto* ptr = KeyPtr(key);
         const size_t headerSize((sizeof(uint64_t) * (1 + BucketCount_)));
         const size_t expectedSize(headerSize + DataPos - 1);
 
@@ -205,6 +204,7 @@ namespace NAC {
             }
         }
 
+        const auto* ptr = KeyPtr(key);
         uint64_t tmp;
         memcpy(&tmp, ptr, sizeof(tmp));
         // std::cerr << ntoh(tmp) << std::endl;
