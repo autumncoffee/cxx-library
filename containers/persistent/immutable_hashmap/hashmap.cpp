@@ -195,20 +195,15 @@ namespace NAC {
 
         const auto* ptr = KeyPtr(key);
         const size_t headerSize((sizeof(uint64_t) * (1 + BucketCount_)));
+        const size_t expectedSize(headerSize + DataPos - 1);
 
-        if (File().Size() < (headerSize + DataPos - 1)) {
-            TFile info(File().Path(), TFile::ACCESS_INFO);
+        if (File().Size() < expectedSize) {
+            File().MSync();
 
-            if (!info) {
+            ((TFile*)File_)->Resize(expectedSize);
+
+            if (!*this) {
                 return TBlob();
-            }
-
-            if (File().Size() < info.Size()) {
-                ((TFile*)File_)->Resize(info.Size());
-
-                if (!*this) {
-                    return TBlob();
-                }
             }
         }
 
