@@ -196,6 +196,22 @@ namespace NAC {
         const auto* ptr = KeyPtr(key);
         const size_t headerSize((sizeof(uint64_t) * (1 + BucketCount_)));
 
+        if (File().Size() < (headerSize + DataPos - 1)) {
+            TFile info(File().Path(), TFile::ACCESS_INFO);
+
+            if (!info) {
+                return TBlob();
+            }
+
+            if (File().Size() < info.Size()) {
+                ((TFile*)File_)->Resize(info.Size());
+
+                if (!*this) {
+                    return TBlob();
+                }
+            }
+        }
+
         uint64_t tmp;
         memcpy(&tmp, ptr, sizeof(tmp));
         // std::cerr << ntoh(tmp) << std::endl;
