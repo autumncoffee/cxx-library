@@ -51,17 +51,18 @@ namespace NAC {
     public:
         TPersistentImmutableHashMap() = delete;
 
-        // Write mode
+        // Create mode
         TPersistentImmutableHashMap(
             const std::string& path,
             uint64_t bucketCount,
             uint32_t seed
         );
 
-        // Read mode
+        // Read/Append mode
         TPersistentImmutableHashMap(
             const std::string& path,
-            uint32_t seed
+            uint32_t seed,
+            bool rw = false
         );
 
         ~TPersistentImmutableHashMap();

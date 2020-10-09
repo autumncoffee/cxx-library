@@ -112,12 +112,13 @@ namespace NAC {
 
     TPersistentImmutableHashMap::TPersistentImmutableHashMap(
         const std::string& path,
-        uint32_t seed
+        uint32_t seed,
+        bool rw
     )
         : Seed(seed)
         , Path(path)
     {
-        new (File_) TFile(Path, TFile::ACCESS_RDONLY);
+        new (File_) TFile(Path, (rw ? TFile::ACCESS_RDWR : TFile::ACCESS_RDONLY));
 
         if (!*this) {
             return;
