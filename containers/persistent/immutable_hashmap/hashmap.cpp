@@ -126,6 +126,10 @@ namespace NAC {
 
         memcpy(&BucketCount_, File().Data(), sizeof(BucketCount_));
         BucketCount_ = ntoh(BucketCount_);
+
+        const size_t headerSize((sizeof(uint64_t) * (1 + BucketCount_)));
+
+        DataPos = File().Size() - headerSize + 1;
     }
 
     TPersistentImmutableHashMap::~TPersistentImmutableHashMap() {
