@@ -124,6 +124,8 @@ namespace NAC {
             return;
         }
 
+        ((TFile*)File_)->SeekToEnd();
+
         memcpy(&BucketCount_, File().Data(), sizeof(BucketCount_));
         BucketCount_ = ntoh(BucketCount_);
 
