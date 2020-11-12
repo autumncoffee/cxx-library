@@ -95,6 +95,10 @@ namespace NAC {
                 return Body->Data();
             }
 
+            std::shared_ptr<TBlob> GetBody() const {
+                return Body;
+            }
+
             TBlob Preamble() const;
             explicit operator TBlobSequence() const;
 
