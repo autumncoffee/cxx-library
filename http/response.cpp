@@ -34,6 +34,21 @@ namespace NAC {
             }
         }
 
+        const TResponse* TResponse::PartByName(const std::string &name) const {
+            for (auto &&part : Parts()) {
+                std::string ContentDisposition;
+                NHTTP::THeaderParams ContentDispositionParams;
+                NHTTPUtils::ParseHeader(part.Headers(), "content-disposition",
+                                        ContentDisposition, ContentDispositionParams);
+                for (auto[key, value]: ContentDispositionParams) {
+                    if (key == std::string("filename") && value == std::string("\"") + name + std::string("\"")) {
+                        return &part;
+                    }
+                }
+            }
+            return nullptr;
+        }
+
         TBlobSequence TResponse::DumpSimple() const {
             auto preamble = Preamble();
 
