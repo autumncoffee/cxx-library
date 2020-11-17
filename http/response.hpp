@@ -114,6 +114,8 @@ namespace NAC {
                 return Parts_;
             }
 
+            const TResponse* PartByName(const std::string& name) const;
+
         private:
             TBlobSequence DumpSimple() const;
             TBlobSequence DumpMultipart() const;
