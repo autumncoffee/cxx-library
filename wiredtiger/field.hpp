@@ -1,17 +1,11 @@
 #pragma once
 
+#include <ac-library/models/field.hpp>
 #include <string>
 #include <functional>
 
 namespace NAC {
-    class TWiredTigerFieldBase {
-    public:
-        std::string Name;
-        size_t Index;
-
-        virtual ~TWiredTigerFieldBase() {
-        }
-
+    class TWiredTigerFieldBase : public TModelFieldBase {
     public:
         virtual std::string Format() const = 0;
         virtual std::function<void*()> Load(void*) const = 0;

@@ -1,12 +1,8 @@
 #pragma once
 
+#include <ac-library/models/model.hpp>
 #include "field.hpp"
-#include <memory>
-#include <vector>
-#include <utility>
-#include <functional>
 #include <string>
-#include <unordered_map>
 #include <ac-common/str.hpp>
 
 namespace {
@@ -15,13 +11,13 @@ namespace {
         thread_local static std::string out;
 
         if (out.empty()) {
-            out = TKey::__ACModelGetFieldNameListStatic();
+            out = TKey::ACWTModelGetFieldNameListStatic();
 
             if (!out.empty()) {
                 out += ",";
             }
 
-            out += TValue::__ACModelGetFieldNameListStatic();
+            out += TValue::ACWTModelGetFieldNameListStatic();
         }
 
         return out;
@@ -29,146 +25,45 @@ namespace {
 }
 
 namespace NAC {
-    class TWiredTigerModelDescrBase {
+    template<typename TKey, typename TValue>
+    class TWiredTigerModelDescr : public TModelDescr<TKey, TValue> {
     public:
-        virtual ~TWiredTigerModelDescrBase() {
-        }
-    };
-
-    template<typename TKey_, typename TValue_>
-    class TWiredTigerModelDescr : public TWiredTigerModelDescrBase {
-    public:
-        using TKey = TKey_;
-        using TValue = TValue_;
-
-        static std::string DBName;
-
         static const std::string& FieldNames() {
             return ::FieldNames<TKey, TValue>();
         }
     };
 
-    class TWiredTigerIndexDescrBase {
-    public:
-        virtual ~TWiredTigerIndexDescrBase() {
-        }
-    };
-
     template<typename TWiredTigerModelDescr, typename TKey_>
-    class TWiredTigerIndexDescr : public TWiredTigerIndexDescrBase {
-    public:
-        using TModel = TWiredTigerModelDescr;
-        using TKey = TKey_;
-
-        static std::string DBName;
+    class TWiredTigerIndexDescr : public TModelIndexDescr<TWiredTigerModelDescr, TKey_> {
     };
 }
 
-using __TACModelFieldMap = std::unordered_map<std::string, size_t>;
-using __TACModelFields = std::vector<std::unique_ptr<NAC::TWiredTigerFieldBase>>;
-using __TACModelData = std::vector<std::function<void*()>>;
+#define AC_WT_MODEL_BEGIN(cls) AC_MODEL_BEGIN(cls, TWiredTigerModelBase)
 
-#define AC_MODEL_BEGIN(cls) \
-class cls : public TWiredTigerModelBase { \
+#define AC_WT_MODEL_FIELD2(type, name, dbName) AC_MODEL_FIELD2(type, name, dbName)
+
+#define AC_WT_MODEL_FIELD(type, name) AC_MODEL_FIELD(type, name)
+
+#define AC_WT_MODEL_FIELD_IMPL(cls, name) AC_MODEL_FIELD_IMPL(cls, name)
+
+#define AC_WT_MODEL_END() \
 private: \
-    using TSelf = cls; \
-\
-private: \
-    static __TACModelFieldMap __ACModelFieldMap; \
-    static __TACModelFields __ACModelFields; \
-    __TACModelData __ACModelData; \
-\
-protected: \
-    const __TACModelFieldMap& __GetACModelFieldMap() const override { \
-        return __ACModelFieldMap; \
-    } \
-\
-    const __TACModelFields& __GetACModelFields() const override { \
-        return __ACModelFields; \
-    } \
-\
-    __TACModelData& __GetACModelData() override { \
-        return __ACModelData; \
-    } \
-\
-    const __TACModelData& __GetACModelData() const override { \
-        return __ACModelData; \
-    } \
-\
-    void Init() { \
-        __ACModelData.reserve(__ACModelFields.size()); \
-\
-        for (const auto& it : __ACModelFields) { \
-            __ACModelData.emplace_back(__TACModelData::value_type()); \
-        } \
-    } \
-\
-public: \
-    cls() { \
-        Init(); \
-    } \
-\
-    static const __TACModelFields& __GetACModelFieldsStatic() { \
-        return __ACModelFields; \
-    }
-
-#define AC_MODEL_FIELD2(type, name, dbName) \
-private: \
-    static size_t __ACModelGet ## name ## Index() { \
-        std::unique_ptr<TWiredTigerFieldBase> ptr(new type); \
-        ptr->Name = #dbName; \
-        size_t index = ptr->Index = __ACModelFields.size(); \
-\
-        __ACModelFields.emplace_back(std::move(ptr)); \
-        __ACModelFieldMap.emplace(#name, index); \
-\
-        return index; \
-    } \
-\
-    static const size_t __ACModelFieldIndex ## name; \
-\
-public: \
-    const type::TValue& Get ## name() const { \
-        if (auto* ptr = (const type::TValue*)__ACModelGet(__ACModelFieldIndex ## name)) { \
-            return *ptr; \
-\
-        } else { \
-            static type::TValue dummy; \
-            return dummy; \
-        } \
-    } \
-\
-    TSelf& Set ## name(const type::TValue& val) { \
-        __ACModelSet(__ACModelFieldIndex ## name, [val]() { \
-            return (void*)&val; \
-        }); \
-\
-        return *this; \
-    }
-
-#define AC_MODEL_FIELD(type, name) AC_MODEL_FIELD2(type, name, name)
-
-#define AC_MODEL_FIELD_IMPL(cls, name) \
-    const size_t cls::__ACModelFieldIndex ## name = cls::__ACModelGet ## name ## Index();
-
-#define AC_MODEL_END() \
-private: \
-    static std::string __ACModelBuildFullFormat() { \
+    static std::string ACWTModelBuildFullFormat() { \
         std::string out; \
 \
-        for (const auto& it : __ACModelFields) { \
-            out += it->Format(); \
+        for (const auto& it : GetACModelFieldsStatic()) { \
+            out += ((const TWiredTigerFieldBase*)it.get())->Format(); \
         } \
 \
         return out; \
     } \
 \
-    static const std::string __ACModelFullFormat; \
+    static const std::string ACWTModelFullFormat_; \
 \
-    static std::string __ACModelBuildFieldNameList() { \
+    static std::string ACWTModelBuildFieldNameList() { \
         std::string out; \
 \
-        for (const auto& it : __ACModelFields) { \
+        for (const auto& it : GetACModelFieldsStatic()) { \
             out += it->Name + ","; \
         } \
 \
@@ -179,58 +74,39 @@ private: \
         return out; \
     } \
 \
-    static const std::string __ACModelFieldNameList; \
+    static const std::string ACWTModelFieldNameList_; \
 \
 protected: \
-    const std::string& __ACModelGetFullFormat() const override { \
-        return __ACModelFullFormat; \
+    const std::string& ACWTModelGetFullFormat() const override { \
+        return ACWTModelFullFormat_; \
     } \
 \
 public: \
-    static const std::string& __ACModelGetFullFormatStatic() { \
-        return __ACModelFullFormat; \
+    static const std::string& ACWTModelGetFullFormatStatic() { \
+        return ACWTModelFullFormat_; \
     } \
 \
-    static const std::string& __ACModelGetFieldNameListStatic() { \
-        return __ACModelFieldNameList; \
+    static const std::string& ACWTModelGetFieldNameListStatic() { \
+        return ACWTModelFieldNameList_; \
     } \
-};
+\
+    AC_MODEL_END()
 
-#define AC_MODEL_IMPL_START(cls) \
-    __TACModelFieldMap cls::__ACModelFieldMap; \
-    __TACModelFields cls::__ACModelFields;
+#define AC_WT_MODEL_IMPL_START(cls) AC_MODEL_IMPL_START(cls)
 
-#define AC_MODEL_IMPL_END(cls) \
-    const std::string cls::__ACModelFullFormat = cls::__ACModelBuildFullFormat(); \
-    const std::string cls::__ACModelFieldNameList = cls::__ACModelBuildFieldNameList();
+#define AC_WT_MODEL_IMPL_END(cls) \
+    const std::string cls::ACWTModelFullFormat_ = cls::ACWTModelBuildFullFormat(); \
+    const std::string cls::ACWTModelFieldNameList_ = cls::ACWTModelBuildFieldNameList(); \
+\
+    AC_MODEL_IMPL_END(cls)
 
 namespace NAC {
-    class TWiredTigerModelBase {
+    class TWiredTigerModelBase : public TModelBase {
     public:
         void Load(void*, size_t, const void*);
         TBlob Dump(void*) const;
 
-        virtual ~TWiredTigerModelBase() {
-        }
-
     protected:
-        virtual const __TACModelFieldMap& __GetACModelFieldMap() const = 0;
-        virtual const __TACModelFields& __GetACModelFields() const = 0;
-        virtual const std::string& __ACModelGetFullFormat() const = 0;
-        virtual __TACModelData& __GetACModelData() = 0;
-        virtual const __TACModelData& __GetACModelData() const = 0;
-
-        void* __ACModelGet(size_t i) const {
-            if (auto&& cb = __GetACModelData().at(i)) {
-                return cb();
-
-            } else {
-                return nullptr;
-            }
-        }
-
-        void __ACModelSet(size_t i, std::function<void*()>&& item) {
-            __GetACModelData()[i] = std::move(item);
-        }
+        virtual const std::string& ACWTModelGetFullFormat() const = 0;
     };
 }

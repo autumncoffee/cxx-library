@@ -4,13 +4,13 @@
 
 namespace NAC {
     void TWiredTigerModelBase::Load(void* session, size_t size, const void* data) {
-        auto&& modelData = __GetACModelData();
+        auto&& modelData = GetACModelData();
         modelData.clear();
         WT_PACK_STREAM* stream;
 
         int result = wiredtiger_unpack_start(
             (WT_SESSION*)session,
-            __ACModelGetFullFormat().data(),
+            ACWTModelGetFullFormat().data(),
             data,
             size,
             &stream
@@ -26,8 +26,8 @@ namespace NAC {
             return;
         }
 
-        for (const auto& it : __GetACModelFields()) {
-            modelData.emplace_back(it->Load(stream));
+        for (const auto& it : GetACModelFields()) {
+            modelData.emplace_back(((const TWiredTigerFieldBase*)it.get())->Load(stream));
         }
 
         {
@@ -39,9 +39,9 @@ namespace NAC {
     TBlob TWiredTigerModelBase::Dump(void* session) const {
         size_t size = 0;
 
-        for (const auto& it : __GetACModelFields()) {
-            if (auto* ptr = __ACModelGet(it->Index)) {
-                size += it->DumpedSize(session, ptr);
+        for (const auto& it : GetACModelFields()) {
+            if (auto* ptr = ACModelGet(it->Index)) {
+                size += ((const TWiredTigerFieldBase*)it.get())->DumpedSize(session, ptr);
             }
         }
 
@@ -56,7 +56,7 @@ namespace NAC {
 
         int result = wiredtiger_pack_start(
             (WT_SESSION*)session,
-            __ACModelGetFullFormat().data(),
+            ACWTModelGetFullFormat().data(),
             (void*)out.Data(),
             size,
             &stream
@@ -72,9 +72,9 @@ namespace NAC {
             return TBlob();
         }
 
-        for (const auto& it : __GetACModelFields()) {
-            if (auto* ptr = __ACModelGet(it->Index)) {
-                it->Dump(stream, ptr);
+        for (const auto& it : GetACModelFields()) {
+            if (auto* ptr = ACModelGet(it->Index)) {
+                ((const TWiredTigerFieldBase*)it.get())->Dump(stream, ptr);
             }
         }
 

@@ -39,8 +39,8 @@ namespace NAC {
         void CreateTable() {
             CreateTable(
                 TWiredTigerModelDescr::DBName,
-                TWiredTigerModelDescr::TKey::__ACModelGetFullFormatStatic(),
-                TWiredTigerModelDescr::TValue::__ACModelGetFullFormatStatic(),
+                TWiredTigerModelDescr::TKey::ACWTModelGetFullFormatStatic(),
+                TWiredTigerModelDescr::TValue::ACWTModelGetFullFormatStatic(),
                 TWiredTigerModelDescr::FieldNames()
             );
         }
@@ -50,7 +50,7 @@ namespace NAC {
             CreateIndex(
                 TWiredTigerIndexDescr::TModel::DBName,
                 TWiredTigerIndexDescr::DBName,
-                TWiredTigerIndexDescr::TKey::__ACModelGetFieldNameListStatic()
+                TWiredTigerIndexDescr::TKey::ACWTModelGetFieldNameListStatic()
             );
         }
 
@@ -117,7 +117,7 @@ namespace NAC {
             class TWiredTigerIndexDescr,
             class TValue = typename TWiredTigerIndexDescr::TModel::TValue,
             std::enable_if_t<std::is_base_of<
-                TWiredTigerIndexDescrBase,
+                TModelIndexDescrBase,
                 TWiredTigerIndexDescr
             >::value>* = nullptr
         >
@@ -128,7 +128,7 @@ namespace NAC {
             return Search(
                 TWiredTigerIndexDescr::TModel::DBName,
                 &TWiredTigerIndexDescr::DBName,
-                TValue::__ACModelGetFieldNameListStatic(),
+                TValue::ACWTModelGetFieldNameListStatic(),
                 key,
                 direction
             );
@@ -138,7 +138,7 @@ namespace NAC {
             class TWiredTigerModelDescr,
             class TValue = typename TWiredTigerModelDescr::TValue,
             std::enable_if_t<std::is_base_of<
-                TWiredTigerModelDescrBase,
+                TModelDescrBase,
                 TWiredTigerModelDescr
             >::value>* = nullptr
         >
@@ -149,7 +149,7 @@ namespace NAC {
             return Search(
                 TWiredTigerModelDescr::DBName,
                 nullptr,
-                TValue::__ACModelGetFieldNameListStatic(),
+                TValue::ACWTModelGetFieldNameListStatic(),
                 key,
                 direction
             );
@@ -171,7 +171,7 @@ namespace NAC {
         ) {
             return SeqScan(
                 TWiredTigerModelDescr::DBName,
-                TValue::__ACModelGetFieldNameListStatic(),
+                TValue::ACWTModelGetFieldNameListStatic(),
                 direction
             );
         }
