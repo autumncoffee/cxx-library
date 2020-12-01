@@ -43,7 +43,7 @@ namespace NAC {
 }
 
 #define AC_WT_MODEL_BEGIN(cls) \
-    AC_MODEL_BEGIN(cls, TWiredTigerModelBase) \
+    AC_MODEL_BEGIN(cls, NAC::TWiredTigerModelBase) \
 \
 private: \
     NAC::TWTModelData ACWTModelData_; \
