@@ -2,6 +2,8 @@
 
 #include <ac-library/models/model.hpp>
 #include "field.hpp"
+#include <utility>
+#include <vector>
 #include <string>
 #include <ac-common/str.hpp>
 
@@ -36,9 +38,38 @@ namespace NAC {
     template<typename TWiredTigerModelDescr, typename TKey_>
     class TWiredTigerIndexDescr : public TModelIndexDescr<TWiredTigerModelDescr, TKey_> {
     };
+
+    using TWTModelData = std::vector<std::function<void*()>>;
 }
 
-#define AC_WT_MODEL_BEGIN(cls) AC_MODEL_BEGIN(cls, TWiredTigerModelBase)
+#define AC_WT_MODEL_BEGIN(cls) \
+    AC_MODEL_BEGIN(cls, TWiredTigerModelBase) \
+\
+private: \
+    NAC::TWTModelData ACWTModelData_; \
+\
+private: \
+    NAC::TWTModelData& GetACWTModelData() override { \
+        return ACWTModelData_; \
+    } \
+\
+    const NAC::TWTModelData& GetACWTModelData() const override { \
+        return ACWTModelData_; \
+    } \
+\
+protected: \
+    void ACWTModelInit() { \
+        ACWTModelData_.reserve(GetACModelFieldsStatic().size()); \
+\
+        for (const auto& it : GetACModelFieldsStatic()) { \
+            ACWTModelData_.emplace_back(NAC::TWTModelData::value_type()); \
+        } \
+    } \
+\
+public: \
+    cls() { \
+        ACWTModelInit(); \
+    }
 
 #define AC_WT_MODEL_FIELD2(type, name, dbName) AC_MODEL_FIELD2(type, name, dbName)
 
@@ -108,5 +139,20 @@ namespace NAC {
 
     protected:
         virtual const std::string& ACWTModelGetFullFormat() const = 0;
+        virtual NAC::TWTModelData& GetACWTModelData() = 0;
+        virtual const NAC::TWTModelData& GetACWTModelData() const = 0;
+
+        void* ACModelGet(size_t i) const override {
+            if (auto&& cb = GetACWTModelData().at(i)) {
+                return cb();
+
+            } else {
+                return nullptr;
+            }
+        }
+
+        void ACModelSet(size_t i, std::function<void*()>&& item) override {
+            GetACWTModelData()[i] = std::move(item);
+        }
     };
 }

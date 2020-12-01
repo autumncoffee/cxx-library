@@ -4,7 +4,7 @@
 
 namespace NAC {
     void TWiredTigerModelBase::Load(void* session, size_t size, const void* data) {
-        auto&& modelData = GetACModelData();
+        auto&& modelData = GetACWTModelData();
         modelData.clear();
         WT_PACK_STREAM* stream;
 

@@ -41,7 +41,6 @@ namespace NAC {
 
     using TModelFieldMap = std::unordered_map<std::string, size_t>;
     using TModelFields = std::vector<std::unique_ptr<NAC::TModelFieldBase>>;
-    using TModelData = std::vector<std::function<void*()>>;
 }
 
 #define AC_MODEL_BEGIN(cls, parent) \
@@ -54,7 +53,6 @@ private: \
 private: \
     static NAC::TModelFieldMap ACModelFieldMap_; \
     static NAC::TModelFields ACModelFields_; \
-    NAC::TModelData ACModelData_; \
 \
 protected: \
     const NAC::TModelFieldMap& GetACModelFieldMap() const override { \
@@ -65,27 +63,7 @@ protected: \
         return ACModelFields_; \
     } \
 \
-    NAC::TModelData& GetACModelData() override { \
-        return ACModelData_; \
-    } \
-\
-    const NAC::TModelData& GetACModelData() const override { \
-        return ACModelData_; \
-    } \
-\
-    void ACModelInit() { \
-        ACModelData_.reserve(ACModelFields_.size()); \
-\
-        for (const auto& it : ACModelFields_) { \
-            ACModelData_.emplace_back(NAC::TModelData::value_type()); \
-        } \
-    } \
-\
 public: \
-    cls() { \
-        ACModelInit(); \
-    } \
-\
     static const NAC::TModelFields& GetACModelFieldsStatic() { \
         return ACModelFields_; \
     }
@@ -147,20 +125,8 @@ namespace NAC {
     protected:
         virtual const NAC::TModelFieldMap& GetACModelFieldMap() const = 0;
         virtual const NAC::TModelFields& GetACModelFields() const = 0;
-        virtual NAC::TModelData& GetACModelData() = 0;
-        virtual const NAC::TModelData& GetACModelData() const = 0;
 
-        void* ACModelGet(size_t i) const {
-            if (auto&& cb = GetACModelData().at(i)) {
-                return cb();
-
-            } else {
-                return nullptr;
-            }
-        }
-
-        void ACModelSet(size_t i, std::function<void*()>&& item) {
-            GetACModelData()[i] = std::move(item);
-        }
+        virtual void* ACModelGet(size_t i) const = 0;
+        virtual void ACModelSet(size_t i, std::function<void*()>&& item) = 0;
     };
 }
