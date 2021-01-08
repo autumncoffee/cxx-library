@@ -1,0 +1,7 @@
+{
+  "name": "ac-cxx-library",
+  "version": "1.0.0",
+  "description": "AutumnCoffee C++ libraries",
+  "main": "stub.js",
+  "private": true
+}
