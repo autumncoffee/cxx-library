@@ -159,7 +159,7 @@ namespace NAC {
 
         {
             TValue tmp;
-            memcpy(&tmp.Prev, ptr, sizeof(tmp));
+            memcpy(&tmp.Prev, ptr, sizeof(uint64_t));
             tmp.Prev = ntoh(tmp.Prev);
             tmp.Key.Wrap(key.Size(), key.Data());
             tmp.Value.Wrap(value.Size(), value.Data());

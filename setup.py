@@ -4,5 +4,5 @@ from distutils.core import setup
 
 setup(
     name="ac-cxx-library",
-    version="1.0.2",
+    version="1.0.3",
 );
