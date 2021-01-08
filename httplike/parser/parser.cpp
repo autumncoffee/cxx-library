@@ -280,7 +280,7 @@ namespace NAC {
 
                     if (newLine) {
                         line = newLine;
-                        lineSize = lineSize;
+                        lineSize = newLineSize;
 
                     } else {
                         line = state.CurrentRequest.Data();
