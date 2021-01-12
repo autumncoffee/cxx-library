@@ -1,1 +1,3 @@
-module.exports = "stub";
+module.exports = {
+  root: __dirname,
+};
