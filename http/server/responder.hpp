@@ -29,6 +29,9 @@ namespace NAC {
             TResponder(TResponder&&) = default;
 
             void Respond(const NHTTP::TResponse& response) const;
+            void Respond(const NHTTP::TResponse& response, NNetServer::TWQCB&& cb) const;
+            void Respond(const NHTTP::TResponse& response, const NNetServer::TWQCB& cb) const;
+
             void Send(const NWebSocketParser::TFrame& response) const;
 
             void Send(const TBlob&) const;

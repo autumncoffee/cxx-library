@@ -98,6 +98,14 @@ namespace NAC {
             PushWriteQueueData((TBlobSequence)response);
         }
 
+        void TClientBase::PushWriteQueue(const NHTTP::TResponse& response, NNetServer::TWQCB&& cb) {
+            PushWriteQueueData((TBlobSequence)response, std::move(cb));
+        }
+
+        void TClientBase::PushWriteQueue(const NHTTP::TResponse& response, const NNetServer::TWQCB& cb) {
+            PushWriteQueueData((TBlobSequence)response, cb);
+        }
+
         void TClientBase::Cb(int filter, int flags) {
             NHTTPLikeServer::TClient::Cb(filter, flags);
 

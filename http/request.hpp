@@ -15,11 +15,20 @@ TResponse Respond ## code() const { \
 \
 void Send ## code() { \
     Send(Respond ## code()); \
+} \
+\
+void Send ## code ## NoClose() { \
+    SendNoClose(Respond ## code()); \
 }
 
 #define AC_HTTP_REQUEST_SEND(type) \
 void Send(type data) const { \
     Responder.Send(std::forward<type>(data)); \
+}
+
+#define AC_HTTP_REQUEST_SEND_RESPONSE_ONCE() \
+if (ResponseSent.exchange(true)) { \
+    throw std::runtime_error("Response sent twice: " + response.FirstLine()); \
 }
 
 namespace NAC {
@@ -156,9 +165,27 @@ namespace NAC {
             }
 
             void Send(const TResponse& response) {
-                if (ResponseSent.exchange(true)) {
-                    throw std::runtime_error("Response sent twice: " + response.FirstLine());
-                }
+                AC_HTTP_REQUEST_SEND_RESPONSE_ONCE()
+
+                Responder.Respond(response, [](std::shared_ptr<NNetServer::TBaseClient> client) {
+                    client->Drop();
+                });
+            }
+
+            void Send(const TResponse& response, NNetServer::TWQCB&& cb) {
+                AC_HTTP_REQUEST_SEND_RESPONSE_ONCE()
+
+                Responder.Respond(response, std::move(cb));
+            }
+
+            void Send(const TResponse& response, const NNetServer::TWQCB& cb) {
+                AC_HTTP_REQUEST_SEND_RESPONSE_ONCE()
+
+                Responder.Respond(response, cb);
+            }
+
+            void SendNoClose(const TResponse& response) {
+                AC_HTTP_REQUEST_SEND_RESPONSE_ONCE()
 
                 Responder.Respond(response);
             }
@@ -166,6 +193,11 @@ namespace NAC {
             template<typename... TArgs>
             void SendFile(TArgs&&... args) {
                 Send(RespondFile(std::forward<TArgs>(args)...));
+            }
+
+            template<typename... TArgs>
+            void SendFileNoClose(TArgs&&... args) {
+                SendNoClose(RespondFile(std::forward<TArgs>(args)...));
             }
 
             AC_HTTP_REQUEST_SEND(const NWebSocketParser::TFrame&);

@@ -4,11 +4,19 @@
 #include <stdlib.h>
 #include <ac-library/http/server/await_client.hpp>
 
+#define AC_HTTP_RESPONSE_CHECKCLIENT() \
+if (Client_.expired()) { \
+    return; \
+}
+
+#define AC_HTTP_RESPONSE_CHECKCLIENT2(expr) \
+if (Client_.expired()) { \
+    return (expr); \
+}
+
 #define AC_HTTP_REPONDER_SEND_IMPL(type) \
 void TResponder::Send(type data) const { \
-    if (Client_.expired()) { \
-        return; \
-    } \
+    AC_HTTP_RESPONSE_CHECKCLIENT() \
     \
     Client()->PushWriteQueueData(data); \
 }
@@ -21,17 +29,25 @@ namespace NAC {
         }
 
         void TResponder::Respond(const NHTTP::TResponse& response) const {
-            if (Client_.expired()) {
-                return;
-            }
+            AC_HTTP_RESPONSE_CHECKCLIENT()
 
             Client()->PushWriteQueue(response);
         }
 
+        void TResponder::Respond(const NHTTP::TResponse& response, NNetServer::TWQCB&& cb) const {
+            AC_HTTP_RESPONSE_CHECKCLIENT()
+
+            Client()->PushWriteQueue(response, std::move(cb));
+        }
+
+        void TResponder::Respond(const NHTTP::TResponse& response, const NNetServer::TWQCB& cb) const {
+            AC_HTTP_RESPONSE_CHECKCLIENT()
+
+            Client()->PushWriteQueue(response, cb);
+        }
+
         void TResponder::Send(const NWebSocketParser::TFrame& frame) const {
-            if (Client_.expired()) {
-                return;
-            }
+            AC_HTTP_RESPONSE_CHECKCLIENT()
 
             Client()->PushWriteQueue(frame);
         }
@@ -43,9 +59,7 @@ namespace NAC {
             TAwaitClientCallback<>&& cb,
             const size_t maxRetries
         ) const {
-            if (Client_.expired()) {
-                return std::shared_ptr<TAwaitHTTPClient>();
-            }
+            AC_HTTP_RESPONSE_CHECKCLIENT2(std::shared_ptr<TAwaitHTTPClient>())
 
             auto client = Client();
             return client->Connect<TAwaitHTTPClient>(host, port, ssl, maxRetries, std::forward<TAwaitClientCallback<>>(cb), client->GetNewSharedPtr());
@@ -59,9 +73,7 @@ namespace NAC {
             TAwaitClientWSCallback<>&& wscb,
             const size_t maxRetries
         ) const {
-            if (Client_.expired()) {
-                return std::shared_ptr<TAwaitHTTPClient>();
-            }
+            AC_HTTP_RESPONSE_CHECKCLIENT2(std::shared_ptr<TAwaitHTTPClient>())
 
             auto client = Client();
             return client->Connect<TAwaitHTTPClient>(host, port, ssl, maxRetries, std::forward<TAwaitClientCallback<>>(cb), std::forward<TAwaitClientWSCallback<>>(wscb), client->GetNewSharedPtr());
@@ -74,24 +86,20 @@ namespace NAC {
             TAwaitHTTPLikeClient::TCallback&& cb,
             const size_t maxRetries
         ) const {
-            if (Client_.expired()) {
-                return std::shared_ptr<TAwaitHTTPLikeClient>();
-            }
+            AC_HTTP_RESPONSE_CHECKCLIENT2(std::shared_ptr<TAwaitHTTPLikeClient>())
 
             auto client = Client();
             return client->Connect<TAwaitHTTPLikeClient>(host, port, ssl, maxRetries, std::forward<TAwaitHTTPLikeClient::TCallback>(cb), client->GetNewSharedPtr());
         }
 
         void TResponder::OnWebSocketStart() const {
-            if (Client_.expired()) {
-                return;
-            }
+            AC_HTTP_RESPONSE_CHECKCLIENT()
 
             Client()->OnWebSocketStart((const std::shared_ptr<NHTTP::TRequest>)RequestPtr);
         }
 
         void TResponder::SetRequestPtr(std::shared_ptr<NHTTP::TRequest>& ptr) {
-            if(!RequestPtr.expired()) {
+            if (!RequestPtr.expired()) {
                 abort();
             }
 

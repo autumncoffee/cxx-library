@@ -1,16 +1,43 @@
 #pragma once
 
+#include "add_client.hpp"
+#include "wqcb.hpp"
+
 #include <ac-common/spin_lock.hpp>
 #include <queue>
 #include <ac-common/muhev.hpp>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
-#include "add_client.hpp"
 #include <ac-library/net/client/connect.hpp>
 #include <ac-common/string_sequence.hpp>
 #include <utility>
 #include <openssl/ssl.h>
+
+namespace {
+    template<typename T, typename... TArgs>
+    struct THasWQCB {
+        using TResult = typename THasWQCB<TArgs...>::TResult;
+    };
+
+    template<typename T>
+    struct THasWQCB<T> {
+        using TResult = std::is_same<
+            std::remove_cv_t<std::remove_reference_t<T>>,
+            NAC::NNetServer::TWQCB
+        >;
+    };
+
+    template<typename TItem, size_t TupleSize, typename TTuple, size_t... Indices>
+    void PushWriteQueueDataConcatSetCb(
+        TItem* item,
+        TTuple&& args,
+        std::index_sequence<Indices...> seq
+    ) {
+        item->Concat(std::get<Indices>(args)...);
+        item->SetCb(std::get<TupleSize - 1>(args));
+    }
+}
 
 namespace NAC {
     namespace NNetServer {
@@ -123,6 +150,14 @@ namespace NAC {
                     Sequence.Concat(std::forward<TArgs>(args)...);
                 }
 
+                void SetCb(TWQCB&& cb) {
+                    Cb = std::move(cb);
+                }
+
+                void SetCb(const TWQCB& cb) {
+                    Cb = cb;
+                }
+
             private:
                 size_t Pos = 0;
                 ssize_t Size = -1;
@@ -130,6 +165,7 @@ namespace NAC {
                 size_t DataPos = 0;
                 TBlobSequence Sequence;
                 bool Dummy = false;
+                TWQCB Cb;
 
                 friend class TNetClient;
             };
@@ -150,7 +186,17 @@ namespace NAC {
             template<typename... TArgs>
             void PushWriteQueueData(TArgs&&... args) {
                 auto item = std::make_shared<TWriteQueueItem>();
-                item->Concat(std::forward<TArgs>(args)...);
+
+                if constexpr (THasWQCB<TArgs...>::TResult::value) {
+                    PushWriteQueueDataConcatSetCb<TWriteQueueItem, sizeof...(TArgs)>(
+                        item.get(),
+                        std::forward_as_tuple(args...),
+                        std::make_index_sequence<sizeof...(TArgs) - 1>()
+                    );
+
+                } else {
+                    item->Concat(std::forward<TArgs>(args)...);
+                }
 
                 PushWriteQueue(std::move(item));
             }

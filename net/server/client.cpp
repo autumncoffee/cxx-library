@@ -149,6 +149,10 @@ namespace NAC {
                         }
 
                     } else if (item->Dummy || (item->Pos >= item->Size)) {
+                        if (item->Cb) {
+                            item->Cb(GetNewSharedPtr<TBaseClient>());
+                        }
+
                         PopWriteItem();
                     }
                 }
