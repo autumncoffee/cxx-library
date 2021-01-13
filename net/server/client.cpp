@@ -87,19 +87,7 @@ namespace NAC {
             }
         }
 
-        void TNetClient::Cb(int filter, int flags) {
-            if (flags & NMuhEv::MUHEV_FLAG_ERROR) {
-                std::cerr << "EV_ERROR" << std::endl;
-                Drop();
-                return;
-            }
-
-            if (flags & NMuhEv::MUHEV_FLAG_EOF) {
-                // NUtils::cluck(1, "EV_EOF");
-                Drop();
-                return;
-            }
-
+        void TNetClient::Cb(int filter, int) {
             if (filter & NMuhEv::MUHEV_FILTER_READ) {
                 while (true) {
                     static const size_t bufSize = 8192;
