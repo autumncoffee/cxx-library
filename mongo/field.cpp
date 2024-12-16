@@ -1,6 +1,7 @@
 #include "field.hpp"
 #include <bsoncxx/document/element.hpp>
 #include <bsoncxx/types.hpp>
+#include <cstdint>
 #include <utility>
 
 namespace NAC {

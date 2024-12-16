@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ac-library/models/field.hpp>
+#include <cstdint>
 #include <string>
 #include <functional>
 

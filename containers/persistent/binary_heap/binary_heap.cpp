@@ -1,5 +1,6 @@
 #include "binary_heap.hpp"
 #include <ac-common/utils/htonll.hpp>
+#include <cstdint>
 #include <stdio.h>
 #include <string.h>
 #include <iterator>

@@ -2,6 +2,7 @@
 
 #include <ac-common/file.hpp>
 #include <ac-common/str.hpp>
+#include <cstdint>
 #include <utility>
 
 namespace NAC {

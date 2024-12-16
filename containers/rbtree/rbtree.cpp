@@ -1,5 +1,6 @@
 #include "rbtree.hpp"
 #include <ac-common/utils/htonll.hpp>
+#include <cstdint>
 // #include <iostream>
 // #include <unordered_set>
 

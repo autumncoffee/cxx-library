@@ -2,6 +2,7 @@
 #include <ac-common/utils/htonll.hpp>
 #include <ac-library/contrib/murmur/MurmurHash3.h>
 #include <absl/numeric/int128.h>
+#include <cstdint>
 #include <stdio.h>
 // #include <iostream>
 

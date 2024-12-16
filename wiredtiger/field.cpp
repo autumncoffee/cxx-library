@@ -1,5 +1,6 @@
 #include "field.hpp"
 #include <wiredtiger.h>
+#include <cstdint>
 #include <stdio.h>
 
 namespace NAC {
